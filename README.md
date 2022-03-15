@@ -3,6 +3,7 @@ eCommerce App for buyer,seller,admin all in one under python using firebase
 
 # Installation
 User Need a Firebase Account to host data
+
 He/She has to modify service-accounts.json file located in res directory as well as Python Code containing details of Firebase account. Instruction through comment are given in source code itself.
 
 # Thanks
@@ -65,6 +66,22 @@ TODO : Fix high floating values of amount and other numerical values
 
 BUG FIX : invalid command name ".!page4_buyershopping2.!scrollableframe.!canvas" while scrolling in y direction on start shopping page
 
+TODO : Edit Quantity in Carts Page
+
+TODO : Seller's FAQ(Discount Slab,Wallet,Premium buyers etc)
+
+TODO : Change default folder open location to Desktop
+
+BUG FIX : Fix Loading GIF
+
+TODO : Decrease opeartional time in processing and fix wishlist abnormal loading time
+
+TODO : If Resource files are missing then download it from internet. Encrypt service files and regularly change encryption keys,so no server hacks!
+
+SECURITY FIX : Fix firebase rules.
+
+TODO : Requires owner to verify admin sign-up(s) before allowing them. Preventing system from compromise.
+
 ______________________________________________________
 
 ## Updates 
@@ -82,3 +99,17 @@ v1.2 @07/09/2021
 v1.3 @07/11/2021
 
 4) Silenced bug at Line number @1079 invalid command name ".!page4_buyershopping2.!scrollableframe.!canvas"
+
+V1.3.2 @18/11/2022
+
+5) Just addded Docs for devs to use FirebaseDB via python easily.
+
+______________________________________________________
+
+## Walkthrough video
+[![KANS on Firebase](https://img.youtube.com/vi/tx7vCw3fhNg/0.jpg)](https://www.youtube.com/watch?v=tx7vCw3fhNg "KANS on Firebase")
+
+______________________________________________________
+
+## Visit Website here
+URL : https://microsoftlabs.github.io/KANS/
