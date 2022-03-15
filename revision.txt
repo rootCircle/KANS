@@ -1,0 +1,52 @@
+Created on Tue Jan 12 18:17:14 2021
+Released on Mon Aug 23 06:54:23 2021
+
+Requirements:
+    libraries,
+    local image files,
+    service-account-file
+
+@author: Microsoftlabs
+Scrolling through mousewheel is supported for Windows,Linux only
+https://stackoverflow.com/questions/17355902/tkinter-binding-mousewheel-to-scrollbar
+
+Email must always be in lower case
+
+____________________________________________________
+
+Found Bugs,Feature request(to be entertained later)
+
+TODO : Add support for '#.$[]\' in firebase
+https://stackoverflow.com/questions/19132867/adding-firebase-data-dots-and-forward-slashes
+TODO : Local Session Expiry Support by threading
+TODO : Login Waiting Sync -Bugs
+TODO : Page4_SellerRecentTransactions,Page4_BuyerRecentlyBrought
+TODO : Transaction log every cash/wallet cash transaction made through Kans->Nested Treeview https://stackoverflow.com/questions/57036493/create-tkinter-nested-treeview-from-nested-dictionary
+TODO : Check for http connection instead of https to decrease false positives in network tests
+TODO : Multi-threading to increase server response time and decrease waiting time(also by optimisng queries)
+TODO : GIF Transaprency
+TODO : Add new encoding tech to avoid key duplication in tempbank using timestamp
+TODO : LoadingPage bug removal for time syncronisation
+TODO : In case an item is deleted remove it from carts,wishlist for all buyers
+TODO : Tiny descrption on cart,wishlist,search product page based on some standard limit and later to be replaced by "..."
+TODO : On waitlist clickling on item will jump it to product view of that item
+TODO : Fix high floating values of amount and other numerical values
+BUG FIX : invalid command name ".!page4_buyershopping2.!scrollableframe.!canvas" while scrolling in y direction on start shopping page
+TODO : Edit Quantity in Carts Page
+TODO : Seller's FAQ(Discount Slab,Wallet,Premium buyers etc)
+TODO : Change default folder open location to Desktop
+BUG FIX : Fix Loading GIF
+TODO : Decrease opeartional time in processing and fix wishlist abnormal loading time.
+______________________________________________________
+
+Updates 
+
+v1.1 @05/09/2021
+1) Make file directory access cross compatible with linux
+2) Error handling updates
+
+v1.2 @07/09/2021
+3) Optimised Imports and Bug Fixes
+
+v1.3 @07/11/2021
+4) Silenced bug at Line number @1079 invalid command name ".!page4_buyershopping2.!scrollableframe.!canvas"
