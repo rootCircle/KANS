@@ -65,6 +65,16 @@ TODO : Fix high floating values of amount and other numerical values
 
 BUG FIX : invalid command name ".!page4_buyershopping2.!scrollableframe.!canvas" while scrolling in y direction on start shopping page
 
+TODO : Edit Quantity in Carts Page
+
+TODO : Seller's FAQ(Discount Slab,Wallet,Premium buyers etc)
+
+TODO : Change default folder open location to Desktop
+
+BUG FIX : Fix Loading GIF
+
+TODO : Decrease opeartional time in processing and fix wishlist abnormal loading time
+
 ______________________________________________________
 
 ## Updates 
