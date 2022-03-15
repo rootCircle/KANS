@@ -92,3 +92,8 @@ v1.2 @07/09/2021
 v1.3 @07/11/2021
 
 4) Silenced bug at Line number @1079 invalid command name ".!page4_buyershopping2.!scrollableframe.!canvas"
+
+______________________________________________________
+
+## Walkthrough video
+[![KANS on Firebase](https://img.youtube.com/vi/tx7vCw3fhNg/0.jpg)](https://www.youtube.com/watch?v=tx7vCw3fhNg "KANS on Firebase")
