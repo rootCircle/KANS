@@ -75,6 +75,10 @@ BUG FIX : Fix Loading GIF
 
 TODO : Decrease opeartional time in processing and fix wishlist abnormal loading time
 
+TODO : If Resource files are missing then download it from internet. Encrypt service files and regularly change encryption keys,so no server hacks!
+
+SECURITY FIX : Fix firebase rules.
+
 ______________________________________________________
 
 ## Updates 
