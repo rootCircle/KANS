@@ -79,6 +79,8 @@ TODO : If Resource files are missing then download it from internet. Encrypt ser
 
 SECURITY FIX : Fix firebase rules.
 
+TODO : Requires owner to verify admin sign-up(s) before allowing them. Preventing system from compromise.
+
 ______________________________________________________
 
 ## Updates 
