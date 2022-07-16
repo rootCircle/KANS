@@ -3,6 +3,7 @@ eCommerce App for buyer,seller,admin all in one under python using firebase
 
 # Installation
 User Need a Firebase Account to host data
+
 He/She has to modify service-accounts.json file located in res directory as well as Python Code containing details of Firebase account. Instruction through comment are given in source code itself.
 
 # Thanks
