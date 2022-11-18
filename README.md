@@ -100,6 +100,10 @@ v1.3 @07/11/2021
 
 4) Silenced bug at Line number @1079 invalid command name ".!page4_buyershopping2.!scrollableframe.!canvas"
 
+V1.3.2 @18/11/2022
+
+5) Just addded Docs for devs to use FirebaseDB via python easily.
+
 ______________________________________________________
 
 ## Walkthrough video
