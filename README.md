@@ -25,7 +25,7 @@ Requirements:
     local image files,
     service-account-file
 
-### @author: Microsoftlabs
+### @author: rootCircle
 Scrolling through mousewheel is supported for Windows,Linux only
 https://stackoverflow.com/questions/17355902/tkinter-binding-mousewheel-to-scrollbar
 
@@ -112,4 +112,4 @@ ______________________________________________________
 ______________________________________________________
 
 ## Visit Website here
-URL : https://microsoftlabs.github.io/KANS/
+URL : https://rootCircle.github.io/KANS/
