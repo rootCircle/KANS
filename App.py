@@ -8,7 +8,7 @@ Requirements:
 pyrebase:login
 firebase_admin:db,registration
 firebase storage:All Images are saved and retrieved as .png file
-@author: Microsoftlabs
+@author: rootCircle
 Scrolling through mousewheel is supported for Windows,Linux only
 Email must always be in lower case
 """
