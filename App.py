@@ -10,16 +10,22 @@ try:
     import tkinter as tk
 except ImportError:
     import Tkinter as tk
-from tkinter import messagebox,Radiobutton,Toplevel,PhotoImage,StringVar,OptionMenu,ttk
+from tkinter import messagebox,Radiobutton,PhotoImage,StringVar,ttk
 import mysql.connector as mysqlcon
 #from time import ctime, time
 from PIL import Image, ImageTk
 import random
+import os
+import errno
 
 HOST="localhost"
 USERNAME="root"
 PASSWORD="password"
 DATABASE="Kans"
+savedir="\\Kans\\App\\ItemImage\\"
+
+savlocimgbtn=""
+
 
 class Apptools:
     def sql_run(self, *sql_query):
@@ -87,6 +93,68 @@ class Apptools:
         else:
             img.place(x=xrow,y=ycolumn,relx=0,rely=0)
 
+    def openfilename(self):
+        filetype=[('Image files', '*.jpg;*.jpeg;*.png;*.bmp'),('All files', '*')]
+        filename = tk.filedialog.askopenfilename(title ='Open',initialdir = os.getcwd(),filetypes=filetype)
+        if filename:
+            return filename
+
+    def save_img(self,xdiry="",filename=""):
+        if not(filename):
+            filename = Apptools.openfilename(self)
+        if filename:
+            try:
+                img = Image.open(filename)
+                img = img.resize((100, 100), Image.ANTIALIAS)
+
+                revfn = Apptools.rev(self,filename)
+                extension=Apptools.rev(self,revfn[:revfn.find(".")+1])
+
+                try:
+                    os.makedirs(savedir)
+                except OSError as e:
+                    if e.errno != errno.EEXIST:
+                        print(e)
+                save_location=xdiry
+                if not(xdiry):
+                    name=Apptools.imgnamegenerator(self,extension)
+                    save_location=savedir+name+extension
+                img.save(save_location)
+                render = ImageTk.PhotoImage(img)
+                imgbtn.config(image=render)
+                imgbtn.image = render
+                globals()['savlocimgbtn']=save_location
+            except Exception as e:
+                print(e)
+                Apptools.save_img(self,"",filename="Additem.png")
+
+
+    def imgnamegenerator(self,extension):
+        name=Apptools.randomtxt(self, 8)
+        diry=savlocimgbtn+name+extension
+
+        while os.path.exists(diry):
+            name=Apptools.randomtxt(self, 8)
+        return name
+
+    def fileexist(self,path):
+        return any(os.isfile(os.join(path, i)) for i in os.listdir(path))
+
+    def imgsavebtn(self,diry,width,height,irow,icolumn,xdiry=""):
+
+        try:
+            Photo = Image.open(diry)
+            Photo = Photo.resize((width, height))
+            render = ImageTk.PhotoImage(Photo)
+            global imgbtn
+
+            imgbtn = tk.Button(self, image=render,command=lambda: Apptools.save_img(self,xdiry))
+            imgbtn.image = render
+            imgbtn.grid(row = irow,column=icolumn,padx=10,pady=10)
+        except Exception as e:
+            print(e)
+            Apptools.imgsavebtn(self,"Additem.png",width,height,irow,icolumn)
+
     def defaultquerylogindata(self,usertype):
         if usertype=="Admin":
             def_query = """Create table IF NOT exists logindataadmin(
@@ -150,6 +218,19 @@ class Apptools:
         bal int);"""
         return def_query
 
+    def defaultqueryitems(self):
+        def_query="""Create table IF NOT EXISTS items(
+        itemno int PRIMARY KEY,
+        iname varchar(32) NOT NULL,
+        iwhp int NOT NULL,
+        irp int NOT NULL,
+        idesc varchar(250) NOT NULL,
+        istock int NOT NULL,
+        imgdir varchar(255) NOT NULL,
+        SellerUsername varchar(32) NOT NULL);
+        """
+        return def_query
+
     def is_not_null(self, *text):
         if len(text)!=0:
             for msg in text:
@@ -189,8 +270,8 @@ class Apptools:
         else:
             return False
 
-    def generate_id(self, table):
-        query = "Select id from " + table+";"
+    def generate_id(self, table, sp="id"):
+        query = "Select "+sp+" from " + table+";"
         out = Apptools.sql_run(self, query)[0]
         k = 1
         list_id = []
@@ -309,6 +390,7 @@ class Apptools:
                     return key
         else:
             messagebox.showwarning("Amount exceed limit","As per a guideline we only accept cashout request of only amount upto 1 Crore Rupees")
+
 
     def logout(self, master):
         G_NAME.set("")
@@ -1604,11 +1686,11 @@ class Page4_AdminDeleteAccount(tk.Frame):
                         noofadmin=rec3[0][0][0]
                         if noofadmin>1:
                             if bal==0:
-                                query_3="Select bal from cashinhandadmin where username='"+G_USERNAME+"';"
+                                query_3="Select bal from cashinhandadmin where username='"+G_USERNAME.get()+"';"
                                 out2=Apptools.sql_run(self, query_3)
                                 if out2 is not None:
                                     if out2[0]!=[]:
-                                        cash=out2[0][0]
+                                        cash=out2[0][0][0]
                                 if cash!=0:
                                     msg2="Show this message to company before deleting your account for settling\nCash to be taken by company : "+str(cash)+"\n Negative value means cash to be given."
                                     messagebox.showwarning("Cash settlement",msg2)
@@ -1617,7 +1699,7 @@ class Page4_AdminDeleteAccount(tk.Frame):
                                     if choice:
                                         del_query1="Delete from logindataadmin where username = '" + G_USERNAME.get() + "';"
                                         del_query2="Delete from walletbank where walno = '" + walno + "';"
-                                        del_query3="Delete from cashinhandadmin where username='"+G_USERNAME+"';"
+                                        del_query3="Delete from cashinhandadmin where username='"+G_USERNAME.get()+"';"
                                         rec=Apptools.sql_run(self,del_query1,del_query2,del_query3)
                                         if rec:
                                             messagebox.showinfo("Success", "Account Deleted Successfully")
@@ -1882,7 +1964,7 @@ class Page4_AdminTopupWallet(tk.Frame):
     def topup(self,username,usertype,amt,pin):
         if pin==G_PIN.get():
             cond1=Apptools.is_not_null(self, username,usertype)
-            cond2=Apptools.in_limit(self,0,10**7,amt)
+            cond2=Apptools.in_limit(self,5,10**7,amt)
             cond3=Apptools.check_digit(self,amt)
             if cond1 and cond3 and cond2:
                 query="select name,walno from logindata"+usertype+" where username='"+username+"';"
@@ -2029,7 +2111,7 @@ class Page4_SellerEditProfile(tk.Frame):
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=2,padx=20,pady=10)
 
-        query="select Name,age,MobNo,Gender,orgName,AddOrg from logindataseller where username='"+G_USERNAME.get()+"';"
+        query="select Name,age,MobNo,orgName,AddOrg,Gender from logindataseller where username='"+G_USERNAME.get()+"';"
         out = Apptools.sql_run(self, query)
 
         data=["" for i in range(6)]
@@ -2038,7 +2120,7 @@ class Page4_SellerEditProfile(tk.Frame):
 
         Entry_Obj=[]
         Fieldname=["Name","Age","Mobile No.","Name of Organisation","Address of Organisation"]
-        for i in range(5):
+        for i in range(4):
             lbl = tk.Label(self, text=Fieldname[i])
             lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
             lbl.grid(row=i+2, column=1,padx=20,pady=5)
@@ -2047,22 +2129,31 @@ class Page4_SellerEditProfile(tk.Frame):
             Entry_Obj[i].grid(row=i+2, column=2)
             Entry_Obj[i].insert(0, data[i])
 
+        lbl = tk.Label(self, text=Fieldname[4])
+        lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=6, column=1,padx=20,pady=5)
+
+        Entry_Obj.append(tk.Text(self, fg="#E8E8E8", bg="#333333",height=5))
+        Entry_Obj[4].config(width=15)
+        Entry_Obj[4].grid(row=6, column=2)
+        Entry_Obj[4].insert(tk.INSERT, data[4])
+
         lbl = tk.Label(self, text="Gender")
         lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=7, column=1,padx=20)
 
-        gender = StringVar(self, data[3])
+        gender = StringVar(self, data[5])
         gen = {"Male": "M", "Female": "F", "Not specified": "N"}
         i = 7
         for (text, value) in gen.items():
             rbtn=Radiobutton(self,text=text,variable=gender,value=value)
             rbtn.config(activebackground="#333333",bg="#333333",fg="#E8E8E8")
             rbtn.config(selectcolor="#333333")
-            rbtn.grid(sticky="W", row=i, column=2,padx=15)
+            rbtn.grid(row=i, column=2)
             i += 1
 
         btn=tk.Button(self,text="Modify Profile")
-        btn.config(command=lambda: self.modifyProfile(master,Entry_Obj[0].get(),Entry_Obj[1].get(),gender.get(),Entry_Obj[2].get(),Entry_Obj[3].get(),Entry_Obj[4].get()))
+        btn.config(command=lambda: self.modifyProfile(master,Entry_Obj[0].get(),Entry_Obj[1].get(),gender.get(),Entry_Obj[2].get(),Entry_Obj[3].get(),Entry_Obj[4].get("1.0","end-1c")))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=10, column=3,pady=10)
 
@@ -2188,7 +2279,7 @@ class Page4_SellerCashoutRequest(tk.Frame):
                     cond1=Apptools.check_digit(self,amt)
                     cond2=Apptools.in_limit(self,0,10**7,amt)
                     if cond1 and cond2:
-                        if bal>int(amt):
+                        if bal>int(amt) and bal>5:
                             key=Apptools.CashoutRequest(self,walno,amt)
                             if key is not None:
                                 messagebox.showinfo("Action Initiated","Use the Key to get access to your wallet amount (in cash) to our nearest agent.")
@@ -2300,7 +2391,7 @@ class Page4_SellerAddItems(tk.Frame):
         tk.Frame.__init__(self, master, bg="#333333")
         self.makeWidgets(master)
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_AdminProfileManagement))
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_SellerItemManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
@@ -2308,16 +2399,88 @@ class Page4_SellerAddItems(tk.Frame):
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=4, sticky="w")
 
-        lbl = tk.Label(self, text="Delete Account")
+        lbl = tk.Label(self, text="Add Items")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=2,padx=30,pady=10)
+
+        lbl = tk.Label(self, text="Item Name")
+        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=2, column=1,padx=5,pady=10)
+
+        Iname=tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        Iname.grid(row=2, column=2)
+
+        lbl = tk.Label(self, text="Wholesale Price")
+        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=3, column=1,padx=5,pady=10)
+
+        Iwhp=tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        Iwhp.grid(row=3, column=2)
+
+        lbl = tk.Label(self, text="Retail Price")
+        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=4, column=1,padx=5,pady=10)
+
+        Irp=tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        Irp.grid(row=4, column=2)
+
+        lbl = tk.Label(self, text="No. of Stocks")
+        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=5, column=1,padx=5,pady=10)
+
+        Istock=tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        Istock.grid(row=5, column=2)
+
+        lbl = tk.Label(self, text="Description")
+        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=6, column=1,padx=5,pady=10)
+
+        IDesc = tk.Text(self, fg="#E8E8E8", bg="#333333",height=5)
+        IDesc.config(width=15)
+        IDesc.grid(row=6, column=2)
+
+        lbl = tk.Label(self, text="Add Image")
+        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=7, column=1,padx=5,pady=10)
+
+        globals()['savlocimgbtn']="Additem.png"
+        Apptools.imgsavebtn(self,"Additem.png",100,100,7,2)
+
+        btn=tk.Button(self,text="Add Item")
+        btn.config(command=lambda: self.additem(master,Iname.get(),Iwhp.get(),Irp.get(),Istock.get(),IDesc.get("1.0","end-1c"),savlocimgbtn))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=8, column=3,pady=10)
+
+    def additem(self,master,iname,iwp,irp,istock,idesc,filedir):
+        cond1=Apptools.is_not_null(self, iname, iwp, irp, istock, idesc,filedir)
+        cond2=Apptools.check_digit(self, iwp,irp,istock)
+        filedir=filedir.replace("\\","\\\\")
+        if cond1 and cond2:
+            def_query=Apptools.defaultqueryitems(self)
+            rec=Apptools.sql_run(self,def_query)
+
+            if rec is not None:
+                ino=Apptools.generate_id(self,"items","itemno")
+                query="Insert into items values("
+                Values=str(ino)+",'"+iname+"',"+iwp+","+irp+",'"+idesc+"',"+istock
+                Values+=",'"+filedir+"','"+G_USERNAME.get()+"');"
+                query+=Values
+
+                rec2=Apptools.sql_run(self,query)
+
+                if rec2 is not None:
+                    messagebox.showinfo("Success!","Item added successfully")
+                    master.switch_frame(Page3_SellerItemManagement)
+        else:
+            messagebox.showwarning("Invalid Input","Fill all the forms correctly to continue")
+
 
 class Page4_SellerModifyItems(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master, bg="#333333")
         self.makeWidgets(master)
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_AdminProfileManagement))
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_SellerItemManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
@@ -2325,10 +2488,95 @@ class Page4_SellerModifyItems(tk.Frame):
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=4, sticky="w")
 
-        lbl = tk.Label(self, text="Delete Account")
+        lbl = tk.Label(self, text="Modify Item Details")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=2,padx=30,pady=10)
 
+        lbl = tk.Label(self, text="Item Code")
+        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=2, column=1,padx=5,pady=10)
+
+        itemno=tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        itemno.grid(row=2, column=2)
+
+        btn=tk.Button(self,text="Get Details")
+        btn.config(command=lambda: self.modify(master,itemno.get()))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=3, column=3,pady=10)
+
+        lbl = tk.Label(self, text="Item Code can be found in\nSearch Items Section.")
+        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=9, column=2,padx=5,pady=10)
+
+    def modify(self,master,itemno):
+        cond1=Apptools.check_digit(self,itemno)
+        if cond1:
+            def_query=Apptools.defaultqueryitems(self)
+            query="select iname,iwhp,irp,idesc,imgdir from items where itemno="+itemno+" and SellerUsername='"+G_USERNAME.get()+"';"
+            out = Apptools.sql_run(self, def_query,query)
+
+            data=["" for i in range(4)]
+            if out:
+                data = out[1]
+                if data!=[]:
+                    data=data[0]
+                    Entry_Obj=[]
+                    Fieldname=["Item Name","Wholesale Price","Retail Price","Description"]
+                    for i in range(3):
+                        lbl = tk.Label(self, text=Fieldname[i])
+                        lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+                        lbl.grid(row=i+4, column=1,padx=20,pady=5)
+
+                        Entry_Obj.append(tk.Entry(self, fg="#E8E8E8", bg="#333333"))
+                        Entry_Obj[i].grid(row=i+4, column=2)
+                        Entry_Obj[i].insert(0, data[i])
+
+                    lbl = tk.Label(self, text=Fieldname[3])
+                    lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+                    lbl.grid(row=7, column=1,padx=20,pady=5)
+
+                    Entry_Obj.append(tk.Text(self, fg="#E8E8E8", bg="#333333",height=5))
+                    Entry_Obj[3].config(width=15)
+                    Entry_Obj[3].grid(row=7, column=2)
+                    Entry_Obj[3].insert(tk.INSERT, data[3])
+
+                    lbl = tk.Label(self, text="Add Image")
+                    lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+                    lbl.grid(row=8, column=1,padx=5,pady=10)
+
+                    globals()['savlocimgbtn']=data[4]
+                    Apptools.imgsavebtn(self,savlocimgbtn,100,100,8,2,data[4])
+
+                    btn=tk.Button(self,text="Modify Details")
+                    btn.config(command=lambda: self.modifyDetails(master,itemno,Entry_Obj[0].get(),Entry_Obj[1].get(),Entry_Obj[2].get(),Entry_Obj[3].get("1.0","end-1c"),savlocimgbtn))
+                    btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+                    btn.grid(row=9, column=3,pady=10)
+
+                else:
+                    messagebox.showwarning("Invalid Item Code","Item Code is incorrect")
+                    master.switch_frame(Page3_SellerItemManagement)
+        else:
+            messagebox.showwarning("Field cannot be empty","Fill all the forms to continue")
+
+
+
+    def modifyDetails(self,master,itemno,iname,iwhp,irp,idesc,filedir):
+        cond1=Apptools.is_not_null(self, iname, iwhp, irp, idesc,filedir)
+        cond2=Apptools.check_digit(self, iwhp,irp)
+        filedir=filedir.replace("\\","\\\\")
+        if cond1 and cond2:
+            def_query=Apptools.defaultqueryitems(self)
+            rec=Apptools.sql_run(self,def_query)
+
+            if rec is not None:
+                query_2 = "Update items Set iname='"+iname+"',iwhp="+iwhp+",irp="+irp+",idesc='"+idesc+"',imgdir='"+filedir+"' where itemno="+str(itemno)+";"
+                rec2=Apptools.sql_run(self, query_2)
+
+                if rec2 is not None:
+                    messagebox.showinfo("Success!", "Item's details updated successfully")
+                    master.switch_frame(Page3_SellerItemManagement)
+        else:
+            messagebox.showwarning("Invalid Input","Fill all the forms correctly to continue")
 
 class Page4_SellerAddStocks(tk.Frame):
     def __init__(self, master):
@@ -2336,7 +2584,7 @@ class Page4_SellerAddStocks(tk.Frame):
         self.makeWidgets(master)
 
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_AdminProfileManagement))
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_SellerItemManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
@@ -2344,9 +2592,71 @@ class Page4_SellerAddStocks(tk.Frame):
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=4, sticky="w")
 
-        lbl = tk.Label(self, text="Delete Account")
+        lbl = tk.Label(self, text="Add Stocks")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=2,padx=30,pady=10)
+
+        lbl = tk.Label(self, text="Item Code")
+        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=2, column=1,padx=5,pady=10)
+
+        itemno=tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        itemno.grid(row=2, column=2)
+
+        btn=tk.Button(self,text="Get Details")
+        btn.config(command=lambda: self.modify(master,itemno.get()))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=3, column=3,pady=10)
+
+        lbl = tk.Label(self, text="Item Code can be found in\nSearch Items Section.")
+        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=6, column=2,padx=5,pady=10)
+
+    def modify(self,master,itemno):
+        cond1=Apptools.check_digit(self,itemno)
+        if cond1:
+            def_query=Apptools.defaultqueryitems(self)
+            query="select istock from items where itemno="+itemno+" and SellerUsername='"+G_USERNAME.get()+"';"
+            out = Apptools.sql_run(self, def_query,query)
+            if out:
+                data = out[1]
+                if data!=[]:
+                    data=data[0][0]
+                    lbl = tk.Label(self, text="No. of Stocks")
+                    lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+                    lbl.grid(row=4, column=1,padx=20,pady=5)
+
+                    Stock=tk.Entry(self, fg="#E8E8E8", bg="#333333")
+                    Stock.grid(row=4, column=2)
+                    Stock.insert(0, data)
+
+                    btn=tk.Button(self,text="Modify Details")
+                    btn.config(command=lambda: self.modifyDetails(master,itemno,Stock.get()))
+                    btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+                    btn.grid(row=5, column=3,pady=10)
+
+                else:
+                    messagebox.showwarning("Invalid Item Code","Item Code is incorrect")
+                    master.switch_frame(Page3_SellerItemManagement)
+
+        else:
+            messagebox.showwarning("Field cannot be empty","Fill all the forms to continue")
+
+    def modifyDetails(self,master,itemno,istock):
+        cond1=Apptools.check_digit(self, itemno,istock)
+        if cond1:
+            def_query=Apptools.defaultqueryitems(self)
+            rec=Apptools.sql_run(self,def_query)
+
+            if rec is not None:
+                query_2 = "Update items Set istock="+istock+" where itemno="+str(itemno)+";"
+                rec2=Apptools.sql_run(self, query_2)
+
+                if rec2 is not None:
+                    messagebox.showinfo("Success!", "Stocks Added successfully")
+                    master.switch_frame(Page3_SellerItemManagement)
+        else:
+            messagebox.showwarning("Invalid Input","Fill all the forms correctly to continue")
 
 class Page4_SellerSearchItem(tk.Frame):
     def __init__(self, master):
