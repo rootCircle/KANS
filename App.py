@@ -10,7 +10,7 @@ try:
     import tkinter as tk
 except ImportError:
     import Tkinter as tk
-from tkinter import messagebox,Radiobutton,Toplevel,PhotoImage,StringVar,OptionMenu
+from tkinter import messagebox,Radiobutton,Toplevel,PhotoImage,StringVar,OptionMenu,ttk
 import mysql.connector as mysqlcon
 #from time import ctime, time
 from PIL import Image, ImageTk
@@ -142,6 +142,12 @@ class Apptools:
         def_query = """Create table IF NOT exists tempbank(
         SecCode varchar(16) NOT NULL primary KEY,
         encode bigint);"""
+        return def_query
+
+    def defaultquerycashinhandadmin(self):
+        def_query="""Create table IF NOT exists cashinhandadmin(
+        username varchar(32) PRIMARY KEY,
+        bal int);"""
         return def_query
 
     def is_not_null(self, *text):
@@ -582,7 +588,9 @@ class Page2_SignupAdmin(tk.Frame):
                             if rec is not None:
                                 Apptools.sql_run(self,Apptools.defaultquerywalletbank(self))
                                 query_2="Insert into walletbank Values('"+walno+"','A',0,"+pin+");"
-                                rec2=Apptools.sql_run(self, query_2)
+                                query_3=Apptools.defaultquerycashinhandadmin(self)
+                                query_4="Insert into cashinhandadmin values('"+user+"',0);"
+                                rec2=Apptools.sql_run(self, query_2 ,query_3 ,query_4)
                                 if rec2 is not None:
                                     messagebox.showinfo("Registration done", "Registered user successfully")
                                     master.switch_frame(Homepage)
@@ -1074,7 +1082,7 @@ class Page3_AdminWalletManagement(tk.Frame):
 
         Apptools.image_Show(self, "Lighthouse.jpg", 3, 1, 200, 150)
 
-        btn=tk.Button(self,text="Cashout",command=lambda: master.switch_frame(Page4_AdminCashout))
+        btn=tk.Button(self,text="Cashout Money",command=lambda: master.switch_frame(Page4_AdminCashout))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=4, column=1, pady=3)
 
@@ -1086,7 +1094,7 @@ class Page3_AdminWalletManagement(tk.Frame):
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=6, column=1, pady=3)
 
-        btn=tk.Button(self,text="Pending Top-ups",command=lambda: master.switch_frame(Page4_AdminPendingTopup))
+        btn=tk.Button(self,text="Pending Cashouts",command=lambda: master.switch_frame(Page4_AdminPendingCashout))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=7, column=1, pady=3)
 
@@ -1125,11 +1133,11 @@ class Page3_SellerProfileManagement(tk.Frame):
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=6, column=1, pady=3)
 
-        btn=tk.Button(self,text="Cashout Request",command=lambda: master.switch_frame(Page4_SellerCashout))
+        btn=tk.Button(self,text="Cashout Request",command=lambda: master.switch_frame(Page4_SellerCashoutRequest))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=7, column=1, pady=3)
 
-        btn=tk.Button(self,text="Recharge Wallet",command=lambda: master.switch_frame(Page4_SellerWalletRecharge))
+        btn=tk.Button(self,text="Recharge Wallet Info",command=lambda: master.switch_frame(Page4_SellerWalletRecharge))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=8, column=1, pady=3)
 
@@ -1482,10 +1490,11 @@ class Page4_AdminEditProfile(tk.Frame):
         cond4=mobno.find(".")==-1 and mobno.find("-")==-1
         cond5=Apptools.is_not_null(self, name, age, gender,mobno)
         if cond1 and cond2 and cond3 and cond4 and cond5:
-            query="select id from logindataadmin where mobno = '" + mobno + "';"
+            query="select username from logindataadmin where mobno = '" + mobno + "';"
             query_2 = "Update logindataadmin Set Name='"+name+"',age="+age+",MobNo="+mobno+",Gender='"+gender+"' where username='"+G_USERNAME.get()+"';"
             out=Apptools.sql_run(self, query)
-            if out and len(out[0])<=1:
+            l=len(out[0])
+            if out and (l==0 or (l==1 and out[0][0][0]==G_USERNAME.get())):
                 rec=Apptools.sql_run(self, query_2)
                 if rec is not None:
                     G_NAME.set("Welcome " + name)
@@ -1522,11 +1531,11 @@ class Page4_AdminCheckBalance(tk.Frame):
         pin.grid(row=2, column=2)
 
         btn=tk.Button(self,text="Check Balance")
-        btn.config(command=lambda: self.checkBal(master,pin.get()))
+        btn.config(command=lambda: self.checkBal(pin.get()))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=3, column=3,pady=10)
 
-    def checkBal(self,master,pin):
+    def checkBal(self,pin):
         if pin==G_PIN.get():
             query="select walno from logindataadmin where username='"+G_USERNAME.get()+"';"
             out=Apptools.sql_run(self, query)
@@ -1595,13 +1604,24 @@ class Page4_AdminDeleteAccount(tk.Frame):
                         noofadmin=rec3[0][0][0]
                         if noofadmin>1:
                             if bal==0:
-                                choice = messagebox.askyesno("Alert", "Are you sure want to delete your account?")
-                                if choice:
-                                    rec=Apptools.sql_run(self, "Delete from logindataadmin where username = '" + G_USERNAME.get() + "';")
-                                    rec2=Apptools.sql_run(self, "Delete from walletbank where walno = '" + walno + "';")
-                                    if rec and rec2:
-                                        messagebox.showinfo("Success", "Account Deleted Successfully")
-                                        master.switch_frame(Homepage)
+                                query_3="Select bal from cashinhandadmin where username='"+G_USERNAME+"';"
+                                out2=Apptools.sql_run(self, query_3)
+                                if out2 is not None:
+                                    if out2[0]!=[]:
+                                        cash=out2[0][0]
+                                if cash!=0:
+                                    msg2="Show this message to company before deleting your account for settling\nCash to be taken by company : "+str(cash)+"\n Negative value means cash to be given."
+                                    messagebox.showwarning("Cash settlement",msg2)
+                                else:
+                                    choice = messagebox.askyesno("Alert", "Are you sure want to delete your account?")
+                                    if choice:
+                                        del_query1="Delete from logindataadmin where username = '" + G_USERNAME.get() + "';"
+                                        del_query2="Delete from walletbank where walno = '" + walno + "';"
+                                        del_query3="Delete from cashinhandadmin where username='"+G_USERNAME+"';"
+                                        rec=Apptools.sql_run(self,del_query1,del_query2,del_query3)
+                                        if rec:
+                                            messagebox.showinfo("Success", "Account Deleted Successfully")
+                                            master.switch_frame(Homepage)
 
                             else:
                                 if bal>0:
@@ -1620,77 +1640,6 @@ class Page4_AdminDeleteAccount(tk.Frame):
                     messagebox.showerror("No such user exists!","Try relogin to our app(possible server glitch or your id is deleted by devs)")
         else:
             messagebox.showwarning("Incorrect PIN","Try entering correct PIN")
-
-class Page4_AdminSelfCashoutRequest(tk.Frame):
-    def __init__(self, master):
-        tk.Frame.__init__(self, master, bg="#333333")
-        self.makeWidgets(master)
-
-    def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_AdminWalletManagement))
-        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=0, sticky="w")
-
-        btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
-        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
-
-        lbl = tk.Label(self, text="Self Cashout Request")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
-
-        lbl = tk.Label(self, text="Enter PIN")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=2, column=1,padx=20,pady=10)
-
-        pin=tk.Entry(self, fg="#E8E8E8", bg="#333333",show="*")
-        pin.grid(row=2, column=2)
-
-        btn=tk.Button(self,text="Proceed")
-        btn.config(command=lambda: self.AdmSelfcashout(master,pin.get()))
-        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=3, column=3,pady=10)
-
-        msg="""This service is availed for a full cashout.
-        No custom amount can't be put
-        (for our no PG Charge service for Admin to work)"""
-        lbl = tk.Label(self, text=msg)
-        lbl.config(font=("Segoe Print", 10), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=4, column=2,pady=10)
-
-    def AdmSelfcashout(self,master,pin):
-        if pin==G_PIN.get():
-            query="select walno from logindataadmin where username='"+G_USERNAME.get()+"';"
-            out=Apptools.sql_run(self, query)
-            if out is not None:
-                if out[0]!=[]:
-                    walno=out[0][0][0]
-                    bal=Apptools.checkBalance(self, walno, pin)
-                    query_2="select count(*) from logindataadmin;"
-                    rec=Apptools.sql_run(self, query_2)
-                    if rec is not None:
-                        noofadmin=rec[0][0][0]
-                        if noofadmin>1:
-                            if bal>0:
-                                key=Apptools.CashoutRequest(self,walno,bal)
-                                if key is not None:
-                                    messagebox.showinfo("Action Initiated","Use the Key to get access to your wallet amount (in cash) to our nearest agent.")
-
-                                    lbl = tk.Label(self, text="Successful\nKey:"+key+"\nNote it down(Not recoverable)")
-                                    lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
-                                    lbl.grid(row=5, column=2,pady=10)
-                            else:
-                                messagebox.showwarning("Insufficient fund","There is insufficient money in your wallet.")
-                                master.switchframe(Page3_DashboardAdmin)
-                        else:
-                            msg="As there are the only one admin on our system hence we can't do this transcation (for a cashout request to happen)\nInconvenience regretted"
-                            messagebox.showerror("Access denied",msg)
-                            master.switch_frame(Page3_DashboardAdmin)
-                else:
-                    messagebox.showerror("No such user exists!","Try relogin to our app(possible server glitch or your id is deleted by devs)")
-        else:
-            messagebox.showwarning("Incorrect PIN","Try entering correct PIN")
-
 
 class Page4_AdminCashout(tk.Frame):
     def __init__(self, master):
@@ -1728,7 +1677,7 @@ class Page4_AdminCashout(tk.Frame):
             rbtn=Radiobutton(self,text=text,variable=user_type,value=value)
             rbtn.config(activebackground="#333333",bg="#333333",fg="#E8E8E8")
             rbtn.config(selectcolor="#333333")
-            rbtn.grid(sticky="W", row=i, column=2,padx=50)
+            rbtn.grid( row=i, column=2)
             i += 1
 
         lbl = tk.Label(self, text="Enter Withdrawl amount")
@@ -1746,11 +1695,11 @@ class Page4_AdminCashout(tk.Frame):
         key.grid(row=7, column=2)
 
         btn=tk.Button(self,text="Proceed")
-        btn.config(command=lambda: self.cashout(master,username.get(),user_type.get(),amt.get(),key.get()))
+        btn.config(command=lambda: self.cashout(username.get(),user_type.get(),amt.get(),key.get()))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=8, column=3,pady=10)
 
-    def cashout(self,master,user,usertype,amt,key):
+    def cashout(self,user,usertype,amt,key):
         cond1=Apptools.is_not_null(self, user,usertype,key)
         cond2=Apptools.in_limit(self,0,10**7,amt)
         cond3=len(key)==16
@@ -1777,7 +1726,8 @@ class Page4_AdminCashout(tk.Frame):
                                         admwalno=out2[0][0][0]
                                         if admwalno != walno:
                                             query_3="Update walletbank set amt=amt+5 where walno = '"+admwalno+"';"
-                                            rec=Apptools.sql_run(self,query_3)
+                                            query_4="Update cashinhandadmin set bal=bal-"+str(kbal-5)+" where username='"+G_USERNAME.get()+"';"
+                                            rec=Apptools.sql_run(self,query_3,query_4)
                                             if rec is not None:
                                                 query_4="delete from tempbank where seccode='"+key+"';"
                                                 rec2=Apptools.sql_run(self,query_4)
@@ -1788,7 +1738,7 @@ class Page4_AdminCashout(tk.Frame):
                                                     lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
                                                     lbl.grid(row=9, column=2,padx=5,pady=10)
                                         else:
-                                             messagebox.showerror("Cashout not possible!","You can take cashout of your own personal account")
+                                            messagebox.showerror("Cashout not possible!","You can take cashout of your own personal account")
                                     else:
                                         messagebox.showerror("Your identity does not exists!","Try relogin to our app(possible server glitch or your id is deleted by devs)")
                             else:
@@ -1799,6 +1749,76 @@ class Page4_AdminCashout(tk.Frame):
                     messagebox.showerror("No such user exists!","Try entering correct username/details")
         else:
             messagebox.showwarning("Invalid Information","Try entering valid information")
+
+
+class Page4_AdminSelfCashoutRequest(tk.Frame):
+    def __init__(self, master):
+        tk.Frame.__init__(self, master, bg="#333333")
+        self.makeWidgets(master)
+
+    def makeWidgets(self, master):
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_AdminWalletManagement))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=0, column=0, sticky="w")
+
+        btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=0, column=4, sticky="w")
+
+        lbl = tk.Label(self, text="Self Cashout Request")
+        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=1, column=2,padx=30,pady=10)
+
+        lbl = tk.Label(self, text="Enter PIN")
+        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=2, column=1,padx=20,pady=10)
+
+        pin=tk.Entry(self, fg="#E8E8E8", bg="#333333",show="*")
+        pin.grid(row=2, column=2)
+
+        btn=tk.Button(self,text="Proceed")
+        btn.config(command=lambda: self.AdmSelfcashout(master,pin.get()))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=3, column=3,pady=10)
+
+        msg="""This service is availed for a full cashout.
+        No custom amount can't be put"""
+        lbl = tk.Label(self, text=msg)
+        lbl.config(font=("Segoe Print", 10), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=4, column=2,pady=10)
+
+    def AdmSelfcashout(self,master,pin):
+        if pin==G_PIN.get():
+            query="select walno from logindataadmin where username='"+G_USERNAME.get()+"';"
+            out=Apptools.sql_run(self, query)
+            if out is not None:
+                if out[0]!=[]:
+                    walno=out[0][0][0]
+                    bal=Apptools.checkBalance(self, walno, pin)
+                    query_2="select count(*) from logindataadmin;"
+                    rec=Apptools.sql_run(self, query_2)
+                    if rec is not None:
+                        noofadmin=rec[0][0][0]
+                        if noofadmin>1:
+                            if bal>0:
+                                key=Apptools.CashoutRequest(self,walno,bal)
+                                if key is not None:
+                                    messagebox.showinfo("Action Initiated","Use the Key to get access to your wallet amount (in cash) to our nearest agent.")
+
+                                    lbl = tk.Label(self, text="Successful\nAmount : "+str(bal)+"\nKey : "+key+"\nNote it down(Not recoverable)")
+                                    lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+                                    lbl.grid(row=5, column=2,pady=10)
+                            else:
+                                messagebox.showwarning("Insufficient fund","There is insufficient money in your wallet.")
+                                master.switch_frame(Page3_DashboardAdmin)
+                        else:
+                            msg="As there are the only one admin on our system hence we can't do this transcation (for a cashout request to happen)\nInconvenience regretted"
+                            messagebox.showerror("Access denied",msg)
+                            master.switch_frame(Page3_DashboardAdmin)
+                else:
+                    messagebox.showerror("No such user exists!","Try relogin to our app(possible server glitch or your id is deleted by devs)")
+        else:
+            messagebox.showwarning("Incorrect PIN","Try entering correct PIN")
 
 
 class Page4_AdminTopupWallet(tk.Frame):
@@ -1819,31 +1839,147 @@ class Page4_AdminTopupWallet(tk.Frame):
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=2,padx=30,pady=10)
 
+        lbl = tk.Label(self, text="Enter Username")
+        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=2, column=1,padx=5,pady=10)
 
+        username=tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        username.grid(row=2, column=2)
 
-class Page4_AdminPendingTopup(tk.Frame):
+        lbl=tk.Label(self,text="User Type")
+        lbl.config(font=("Chiller", 20),fg="#E8E8E8",bg="#333333")
+        lbl.grid(row=3, column=1)
+
+        user_type = StringVar(self, "Admin")
+        user = {"Admin": "Admin", "Buyer": "Buyer", "Seller": "Seller"}
+        i = 3
+        for (text, value) in user.items():
+            rbtn=Radiobutton(self,text=text,variable=user_type,value=value)
+            rbtn.config(activebackground="#333333",bg="#333333",fg="#E8E8E8")
+            rbtn.config(selectcolor="#333333")
+            rbtn.grid( row=i, column=2)
+            i += 1
+
+        lbl = tk.Label(self, text="Enter Topup Amount")
+        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=6, column=1,padx=5,pady=10)
+
+        amt=tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        amt.grid(row=6, column=2)
+
+        lbl = tk.Label(self, text="Enter your PIN")
+        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=7, column=1,padx=20,pady=10)
+
+        pin=tk.Entry(self, fg="#E8E8E8", bg="#333333",show="*")
+        pin.grid(row=7, column=2)
+
+        btn=tk.Button(self,text="Proceed")
+        btn.config(command=lambda: self.topup(username.get(),user_type.get(),amt.get(),pin.get()))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=8, column=3,pady=10)
+
+    def topup(self,username,usertype,amt,pin):
+        if pin==G_PIN.get():
+            cond1=Apptools.is_not_null(self, username,usertype)
+            cond2=Apptools.in_limit(self,0,10**7,amt)
+            cond3=Apptools.check_digit(self,amt)
+            if cond1 and cond3 and cond2:
+                query="select name,walno from logindata"+usertype+" where username='"+username+"';"
+                out=Apptools.sql_run(self, query)
+                if out is not None:
+                    if out[0]!=[]:
+                        walno=out[0][0][1]
+                        name=out[0][0][0]
+                        netamt=str(int(amt)-5)
+                        choice = messagebox.askyesno("Sure", "Are you sure want to recharge the wallet of user "+name+" with Rs. "+netamt+"?\nPG & Other Charge = Rs. 5")
+                        if choice:
+                            query_2="Update walletbank set amt=amt+"+netamt+" where walno = '"+walno+"';"
+                            query_3="select walno from logindataadmin where username='"+G_USERNAME.get()+"';"
+                            out2=Apptools.sql_run(self,query_3)
+                            if out2 is not None:
+                                if out2[0]!=[]:
+                                    admwalno=out2[0][0][0]
+                                    if admwalno != walno:
+                                        query_3="Update walletbank set amt=amt+5 where walno = '"+admwalno+"';"
+                                        query_4="Update cashinhandadmin set bal=bal+"+amt+" where username='"+G_USERNAME.get()+"';"
+                                        rec=Apptools.sql_run(self,query_2,query_3,query_4)
+                                        if rec is not None:
+                                            messagebox.showinfo("Transaction successful!","Transferred Rs. "+netamt+" to user "+name+" Successfully\nAsk user to check his account")
+                                            msg="Transaction Receipt\nName : {0}\nNet Amount Recharged : {1}\nPG & Other Charge : 5\nCash Given by user : {2}".format(name,netamt,amt).strip()
+                                            lbl = tk.Label(self, text=msg)
+                                            lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+                                            lbl.grid(row=9, column=2,pady=10,padx=5)
+                                    else:
+                                        messagebox.showerror("TopUp not possible!","You can take topup your own personal account")
+                                else:
+                                    messagebox.showerror("Your identity does not exists!","Try relogin to our app(possible server glitch or your id is deleted by devs)")
+                    else:
+                        messagebox.showerror("No such user exists!","Try entering correct username/details")
+            else:
+                messagebox.showwarning("Invalid Information","Try entering valid information")
+        else:
+            messagebox.showwarning("Incorrect PIN","Try entering correct PIN")
+
+class Page4_AdminPendingCashout(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master, bg="#333333")
         self.makeWidgets(master)
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_AdminProfileManagement))
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_AdminWalletManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=2, sticky="w")
 
-        lbl = tk.Label(self, text="Delete Account")
+        lbl = tk.Label(self, text="Pending Cashout")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=1,padx=30,pady=10)
+
+        self.pendingcashout()
+
+
+    def pendingcashout(self):
+        def_query=Apptools.defaultquerytempbank(self)
+        query="Select * from tempbank;"
+        out=Apptools.sql_run(self,def_query, query)
+
+        if out is not None:
+            out=out[1]
+            if out!=[]:
+                for i in range(len(out)):
+                    out[i]=Apptools.keydecoder(self, out[i][0], out[i][1])
+                self.output(out)
+            else:
+                messagebox.showinfo("No pending cashout(s)", "No records found")
+
+                lbl = tk.Label(self, text="No pending cashout(s)")
+                lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+                lbl.grid(row=2, column=1,padx=30,pady=10)
+
+    def output(self, out):
+        column = ("Wallet Number","Amount")
+        listBox = ttk.Treeview(self,selectmode="extended",columns=column,show="headings")
+
+        for i in range(len(column)):
+            listBox.heading(column[i], text=column[i])
+            listBox.column(column[i], minwidth=0, width=90)
+        for col in column:
+            listBox.heading(col, text=col)
+        listBox.grid(row=2, column=1,padx=10,pady=10)
+
+        for i in out:
+            listBox.insert("", "end", values=i)
+
 
 class Page4_SellerShowProfile(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master, bg="#333333")
         self.makeWidgets(master)
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_AdminProfileManagement))
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_SellerProfileManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
@@ -1851,16 +1987,37 @@ class Page4_SellerShowProfile(tk.Frame):
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=4, sticky="w")
 
-        lbl = tk.Label(self, text="Delete Account")
+        lbl = tk.Label(self, text="Profile")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=2,padx=20,pady=10)
+
+        Fieldname=["Name","Age","Gender","Mobile No.","Name of Organisation","Address of Organisation"]
+        query="select Name,age,Gender,MobNo,orgName,AddOrg from logindataseller where username='"+G_USERNAME.get()+"';"
+        out=Apptools.sql_run(self, query)
+        if out:
+            out=list(out[0][0])
+            if out[2] == "M":
+                out[2] = "Male"
+            elif out[2] == "F":
+                out[2] = "Female"
+            else:
+                out[2] = "Not specified"
+
+            for i in range(len(Fieldname)):
+                lbl = tk.Label(self, text=Fieldname[i]+":")
+                lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+                lbl.grid(row=i+2, column=1,padx=5)
+
+                lbl = tk.Label(self, text=out[i])
+                lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+                lbl.grid(row=i+2, column=3,padx=5)
 
 class Page4_SellerEditProfile(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master, bg="#333333")
         self.makeWidgets(master)
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_AdminProfileManagement))
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_SellerProfileManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
@@ -1868,16 +2025,75 @@ class Page4_SellerEditProfile(tk.Frame):
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=4, sticky="w")
 
-        lbl = tk.Label(self, text="Delete Account")
+        lbl = tk.Label(self, text="Modify Profile")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=2,padx=20,pady=10)
+
+        query="select Name,age,MobNo,Gender,orgName,AddOrg from logindataseller where username='"+G_USERNAME.get()+"';"
+        out = Apptools.sql_run(self, query)
+
+        data=["" for i in range(6)]
+        if out:
+            data = out[0][0]
+
+        Entry_Obj=[]
+        Fieldname=["Name","Age","Mobile No.","Name of Organisation","Address of Organisation"]
+        for i in range(5):
+            lbl = tk.Label(self, text=Fieldname[i])
+            lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+            lbl.grid(row=i+2, column=1,padx=20,pady=5)
+
+            Entry_Obj.append(tk.Entry(self, fg="#E8E8E8", bg="#333333"))
+            Entry_Obj[i].grid(row=i+2, column=2)
+            Entry_Obj[i].insert(0, data[i])
+
+        lbl = tk.Label(self, text="Gender")
+        lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=7, column=1,padx=20)
+
+        gender = StringVar(self, data[3])
+        gen = {"Male": "M", "Female": "F", "Not specified": "N"}
+        i = 7
+        for (text, value) in gen.items():
+            rbtn=Radiobutton(self,text=text,variable=gender,value=value)
+            rbtn.config(activebackground="#333333",bg="#333333",fg="#E8E8E8")
+            rbtn.config(selectcolor="#333333")
+            rbtn.grid(sticky="W", row=i, column=2,padx=15)
+            i += 1
+
+        btn=tk.Button(self,text="Modify Profile")
+        btn.config(command=lambda: self.modifyProfile(master,Entry_Obj[0].get(),Entry_Obj[1].get(),gender.get(),Entry_Obj[2].get(),Entry_Obj[3].get(),Entry_Obj[4].get()))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=10, column=3,pady=10)
+
+    def modifyProfile(self,master,name,age,gender,mobno,orgname,addorg):
+        cond1=Apptools.in_limit(self,10**9,10**10,mobno)
+        cond2=Apptools.in_limit(self, 0, 150, age)
+        cond3=Apptools.check_digit(self, age,mobno)
+        cond4=mobno.find(".")==-1 and mobno.find("-")==-1
+        cond5=Apptools.is_not_null(self, name, age, gender,mobno)
+        if cond1 and cond2 and cond3 and cond4 and cond5:
+            query="select username from logindataseller where mobno = '" + mobno + "';"
+            query_2 = "Update logindataseller Set Name='"+name+"',age="+age+",MobNo="+mobno+",Gender='"+gender+"',orgname='"+orgname+"',addorg='"+addorg+"' where username='"+G_USERNAME.get()+"';"
+            out=Apptools.sql_run(self, query)
+            l=len(out[0])
+            if out and (l==0 or (l==1 and out[0][0][0]==G_USERNAME.get())):
+                rec=Apptools.sql_run(self, query_2)
+                if rec is not None:
+                    G_NAME.set("Welcome " + name)
+                    messagebox.showinfo("Success!", "Profile updated successfully")
+                    master.switch_frame(Page3_DashboardSeller)
+            elif out is not None:
+                messagebox.showwarning("Sorry! Mobile number is already taken", "Try a different mobile number")
+        else:
+            messagebox.showwarning("Error", "Fill all form(s) correctly to continue")
 
 class Page4_SellerCheckBalance(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master, bg="#333333")
         self.makeWidgets(master)
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_AdminProfileManagement))
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_SellerProfileManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
@@ -1885,16 +2101,45 @@ class Page4_SellerCheckBalance(tk.Frame):
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=4, sticky="w")
 
-        lbl = tk.Label(self, text="Delete Account")
+        lbl = tk.Label(self, text="Check Balance")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=2,padx=30,pady=10)
 
-class Page4_SellerCashout(tk.Frame):
+        lbl = tk.Label(self, text="Enter PIN")
+        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=2, column=1,padx=20,pady=10)
+
+        pin=tk.Entry(self, fg="#E8E8E8", bg="#333333",show="*")
+        pin.grid(row=2, column=2)
+
+        btn=tk.Button(self,text="Check Balance")
+        btn.config(command=lambda: self.checkBal(pin.get()))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=3, column=3,pady=10)
+
+    def checkBal(self,pin):
+        if pin==G_PIN.get():
+            query="select walno from logindataseller where username='"+G_USERNAME.get()+"';"
+            out=Apptools.sql_run(self, query)
+            if out is not None:
+                if out[0]!=[]:
+                    walno=out[0][0][0]
+                    bal=Apptools.checkBalance(self, walno, pin)
+
+                    lbl = tk.Label(self, text="The Precious Money in your wallet is\n₹ "+str(bal))
+                    lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+                    lbl.grid(row=4, column=2,padx=20,pady=20)
+                else:
+                    messagebox.showerror("No such user exists!","Try relogin to our app(possible server glitch or your id is deleted by devs)")
+        else:
+            messagebox.showwarning("Incorrect PIN","Try entering correct PIN")
+
+class Page4_SellerCashoutRequest(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master, bg="#333333")
         self.makeWidgets(master)
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_AdminProfileManagement))
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_SellerProfileManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
@@ -1902,9 +2147,64 @@ class Page4_SellerCashout(tk.Frame):
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=4, sticky="w")
 
-        lbl = tk.Label(self, text="Delete Account")
+        lbl = tk.Label(self, text="Self Cashout Request")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=2,padx=30,pady=10)
+
+        lbl = tk.Label(self, text="Enter Balance")
+        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=2, column=1,padx=20,pady=10)
+
+        amt=tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        amt.grid(row=2, column=2)
+
+        lbl = tk.Label(self, text="Enter PIN")
+        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=3, column=1,padx=20,pady=10)
+
+        pin=tk.Entry(self, fg="#E8E8E8", bg="#333333",show="*")
+        pin.grid(row=3, column=2)
+
+        btn=tk.Button(self,text="Proceed")
+        btn.config(command=lambda: self.Sellercashout(master,pin.get(),amt.get()))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=4, column=3,pady=10)
+
+        msg="""After generating of key write down key and amount safely
+        and show it to our nearest admin.
+        PG charges (Rs.5) is applicable."""
+        lbl = tk.Label(self, text=msg)
+        lbl.config(font=("Segoe Print", 10), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=5, column=2,pady=10)
+
+    def Sellercashout(self,master,pin,amt):
+        if pin==G_PIN.get():
+            query="select walno from logindataseller where username='"+G_USERNAME.get()+"';"
+            out=Apptools.sql_run(self, query)
+            if out is not None:
+                if out[0]!=[]:
+                    walno=out[0][0][0]
+                    bal=Apptools.checkBalance(self, walno, pin)
+                    cond1=Apptools.check_digit(self,amt)
+                    cond2=Apptools.in_limit(self,0,10**7,amt)
+                    if cond1 and cond2:
+                        if bal>int(amt):
+                            key=Apptools.CashoutRequest(self,walno,amt)
+                            if key is not None:
+                                messagebox.showinfo("Action Initiated","Use the Key to get access to your wallet amount (in cash) to our nearest agent.")
+
+                                lbl = tk.Label(self, text="Successful\nAmount : "+amt+"\nKey : "+key+"\nNote it down(Not recoverable)")
+                                lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+                                lbl.grid(row=6, column=2,pady=10)
+                        else:
+                            messagebox.showwarning("Insufficient fund","There is insufficient money in your wallet.")
+                            master.switch_frame(Page3_DashboardSeller)
+                    else:
+                        messagebox.showwarning("Invalid entry","Enter a valid amount(Max 1 Crore).")
+                else:
+                    messagebox.showerror("No such user exists!","Try relogin to our app(possible server glitch or your id is deleted by devs)")
+        else:
+            messagebox.showwarning("Incorrect PIN","Try entering correct PIN")
 
 
 class Page4_SellerWalletRecharge(tk.Frame):
@@ -1913,24 +2213,32 @@ class Page4_SellerWalletRecharge(tk.Frame):
         self.makeWidgets(master)
 
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_AdminProfileManagement))
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_SellerProfileManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=2, sticky="w")
 
-        lbl = tk.Label(self, text="Delete Account")
+        lbl = tk.Label(self, text="Wallet Recharge Info")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=1,padx=30,pady=10)
+
+        msg="""To recharge your wallet you must go to our admin locations,
+        Admin will ask for your Username, Usertype, Amount to be topup
+        PG Charges of Rs. 5 irrespective of amount is applicable.
+        Never share your personal details like your PIN,Password etc with admin."""
+        lbl = tk.Label(self, text=msg)
+        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=2, column=1,padx=30,pady=10)
 
 class Page4_SellerDeleteAccount(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master, bg="#333333")
         self.makeWidgets(master)
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_AdminProfileManagement))
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_SellerProfileManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
@@ -1941,6 +2249,51 @@ class Page4_SellerDeleteAccount(tk.Frame):
         lbl = tk.Label(self, text="Delete Account")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=2,padx=30,pady=10)
+
+        lbl = tk.Label(self, text="Enter PIN")
+        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=2, column=1,padx=20,pady=10)
+
+        pin=tk.Entry(self, fg="#E8E8E8", bg="#333333",show="*")
+        pin.grid(row=2, column=2)
+
+        btn=tk.Button(self,text="Proceed")
+        btn.config(command=lambda: self.checkDel(master,pin.get()))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=3, column=3,pady=10)
+
+    def checkDel(self,master,pin):
+        if pin==G_PIN.get():
+            query="select walno from logindataseller where username='"+G_USERNAME.get()+"';"
+            out=Apptools.sql_run(self, query)
+            if out is not None:
+                if out[0]!=[]:
+                    walno=out[0][0][0]
+                    bal=Apptools.checkBalance(self, walno, pin)
+
+                    if bal==0:
+                        choice = messagebox.askyesno("Alert", "Are you sure want to delete your account?")
+                        if choice:
+                            del_query1="Delete from logindataseller where username = '" + G_USERNAME.get() + "';"
+                            del_query2="Delete from walletbank where walno = '" + walno + "';"
+                            rec=Apptools.sql_run(self,del_query1,del_query2)
+                            if rec:
+                                messagebox.showinfo("Success", "Account Deleted Successfully")
+                                master.switch_frame(Homepage)
+                    else:
+                        if bal>0:
+                            msg="You have with us the precious money in your account,proceed for a cashout request before deleting account.\nInconvenience regretted"
+                            messagebox.showwarning("Money is Precious",msg)
+                            master.switch_frame(Page3_DashboardSeller)
+                        else:
+                            msg="You have to settle your account,proceed for a wallet topup request (Equivalent to loan balance in wallet) from admin before deleting account.\nInconvenience regretted"
+                            messagebox.showwarning("Money is Precious",msg)
+                            master.switch_frame(Page3_DashboardSeller)
+                else:
+                    messagebox.showerror("No such user exists!","Try relogin to our app(possible server glitch or your id is deleted by devs)")
+        else:
+            messagebox.showwarning("Incorrect PIN","Try entering correct PIN")
+
 
 class Page4_SellerAddItems(tk.Frame):
     def __init__(self, master):
