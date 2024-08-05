@@ -3,6 +3,7 @@
 Created on Tue Jan 12 18:17:14 2021
 Requirements:
     PIL library,mysql.connector,SQL DATABASE WITH localhost,user=root,password=password
+Releases: Cache Delete for image
 @author: compaq
 """
 
@@ -10,9 +11,9 @@ try:
     import tkinter as tk
 except ImportError:
     import Tkinter as tk
-from tkinter import messagebox,Radiobutton,PhotoImage,StringVar,ttk
+from tkinter import messagebox,Radiobutton,PhotoImage,StringVar,filedialog,ttk
+import tkinter.font as tkFont
 import mysql.connector as mysqlcon
-#from time import ctime, time
 from PIL import Image, ImageTk
 import random
 import os
@@ -22,7 +23,7 @@ HOST="localhost"
 USERNAME="root"
 PASSWORD="password"
 DATABASE="Kans"
-savedir="\\Kans\\App\\ItemImage\\"
+savedir="C:\\Kans\\App\\ItemImage\\"
 
 savlocimgbtn=""
 
@@ -95,7 +96,7 @@ class Apptools:
 
     def openfilename(self):
         filetype=[('Image files', '*.jpg;*.jpeg;*.png;*.bmp'),('All files', '*')]
-        filename = tk.filedialog.askopenfilename(title ='Open',initialdir = os.getcwd(),filetypes=filetype)
+        filename = filedialog.askopenfilename(title ='Open',initialdir = os.getcwd(),filetypes=filetype)
         if filename:
             return filename
 
@@ -115,10 +116,14 @@ class Apptools:
                 except OSError as e:
                     if e.errno != errno.EEXIST:
                         print(e)
-                save_location=xdiry
+
                 if not(xdiry):
                     name=Apptools.imgnamegenerator(self,extension)
                     save_location=savedir+name+extension
+                else:
+                    save_location=xdiry
+                    save_location=xdiry[:save_location.find(".")]+extension
+
                 img.save(save_location)
                 render = ImageTk.PhotoImage(img)
                 imgbtn.config(image=render)
@@ -137,8 +142,6 @@ class Apptools:
             name=Apptools.randomtxt(self, 8)
         return name
 
-    def fileexist(self,path):
-        return any(os.isfile(os.join(path, i)) for i in os.listdir(path))
 
     def imgsavebtn(self,diry,width,height,irow,icolumn,xdiry=""):
 
@@ -391,11 +394,27 @@ class Apptools:
         else:
             messagebox.showwarning("Amount exceed limit","As per a guideline we only accept cashout request of only amount upto 1 Crore Rupees")
 
+    def clearImgCache(self):
+        def_query=Apptools.defaultqueryitems(self)
+        query="Select imgdir from items;"
+        out=Apptools.sql_run(self,def_query,query)[1]
+        for i in range(len(out)):
+            out[i]=out[i][0]
+
+        onlyfiles = [savedir+f for f in os.listdir(savedir) if os.path.isfile(os.path.join(savedir, f))]
+        dup=list(onlyfiles)
+        for l in dup:
+            if l in out:
+                onlyfiles.remove(l)
+        for l in onlyfiles:
+            if os.path.exists(l):
+                os.remove(l)
 
     def logout(self, master):
         G_NAME.set("")
         G_PIN.set("")
         G_USERNAME.set("")
+        Apptools.clearImgCache(self)
         master.switch_frame(Homepage)
 
 class App(tk.Tk):
@@ -1271,10 +1290,6 @@ class Page3_SellerItemManagement(tk.Frame):
         btn=tk.Button(self,text="Remove items",command=lambda: master.switch_frame(Page4_SellerRemoveItem))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=8, column=1, pady=3)
-
-        btn=tk.Button(self,text="Recent trasactions",command=lambda: master.switch_frame(Page4_SellerRecentTransactions))
-        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=9, column=1, pady=3)
 
 class Page3_BuyerProfileManagement(tk.Frame):
     def __init__(self, master):
@@ -2556,7 +2571,7 @@ class Page4_SellerModifyItems(tk.Frame):
                     messagebox.showwarning("Invalid Item Code","Item Code is incorrect")
                     master.switch_frame(Page3_SellerItemManagement)
         else:
-            messagebox.showwarning("Field cannot be empty","Fill all the forms to continue")
+            messagebox.showwarning("Invalid Field","Fill all the forms correctly to continue")
 
 
 
@@ -2575,6 +2590,7 @@ class Page4_SellerModifyItems(tk.Frame):
                 if rec2 is not None:
                     messagebox.showinfo("Success!", "Item's details updated successfully")
                     master.switch_frame(Page3_SellerItemManagement)
+
         else:
             messagebox.showwarning("Invalid Input","Fill all the forms correctly to continue")
 
@@ -2640,7 +2656,7 @@ class Page4_SellerAddStocks(tk.Frame):
                     master.switch_frame(Page3_SellerItemManagement)
 
         else:
-            messagebox.showwarning("Field cannot be empty","Fill all the forms to continue")
+            messagebox.showwarning("Invalid Field","Fill all the forms correctly to continue")
 
     def modifyDetails(self,master,itemno,istock):
         cond1=Apptools.check_digit(self, itemno,istock)
@@ -2663,7 +2679,7 @@ class Page4_SellerSearchItem(tk.Frame):
         tk.Frame.__init__(self, master, bg="#333333")
         self.makeWidgets(master)
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_AdminProfileManagement))
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_SellerItemManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
@@ -2671,16 +2687,150 @@ class Page4_SellerSearchItem(tk.Frame):
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=4, sticky="w")
 
-        lbl = tk.Label(self, text="Delete Account")
+        lbl = tk.Label(self, text="Search Items")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=2,padx=30,pady=10)
+
+        lbl = tk.Label(self, text="Search Criteria")
+        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=2, column=1,padx=5,pady=10)
+
+        Searchcr = ["Item Name","Wholesale Price","Retail Price","Description"]
+
+        SearchcrVar = StringVar(self, "Item Name")
+        Menu = tk.OptionMenu(self, SearchcrVar, *Searchcr)
+        Menu.config(bg="#333333", bd=0, fg="#E8E8E8", activebackground="#333333")
+        Menu["menu"].config(bg="#333333", fg="#E8E8E8", activebackground="#1F8EE7")
+        Menu.grid(row=2, column=2)
+
+        lbl = tk.Label(self, text="Enter Value")
+        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=3, column=1,padx=5,pady=10)
+
+        val=tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        val.grid(row=3, column=2)
+
+        btn=tk.Button(self,text="Search")
+        btn.config(command=lambda: self.search(val.get(),SearchcrVar.get()))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=3, column=3,pady=10)
+
+        btn=tk.Button(self,text="Show All")
+        btn.config(command=self.showAll)
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=4, column=3,pady=10)
+
+    def search(self, text, criteria):
+        def_query = Apptools.defaultqueryitems(self)
+
+        Apptools.sql_run(self, def_query)
+        if Apptools.is_not_null(self, text):
+            if criteria not in ("Wholesale Price","Retail Price"):
+                query ="Select * from items where "+ self.dbeqv(criteria)+ " like '%"+ text+ "%' and SellerUsername='"+G_USERNAME.get()+"';"
+                record = Apptools.sql_run(self, query)
+            else:
+                if Apptools.check_digit(self, text):
+                    query ="Select * from items where " + self.dbeqv(criteria) + " = " + str(text)+";"
+                    record = Apptools.sql_run(self, query)
+                else:
+                    messagebox.showwarning("Error", "Incorrect input!")
+                    record = None
+            if record is not None:
+                out = record[0]
+                if out != []:
+                    self.output(out)
+                else:
+                    messagebox.showinfo("No data", "No records found")
+        else:
+            messagebox.showwarning("Error", "Incomplete input!")
+
+    def dbeqv(self,colname):
+        txt=""
+        data = ["Item Name","Wholesale Price","Retail Price","Description"]
+        if colname==data[0]:
+            txt="iname"
+        elif colname==data[1]:
+            txt="iwhp"
+        elif colname==data[2]:
+            txt="irp"
+        elif colname==data[3]:
+            txt="idesc"
+        return txt
+
+    def showAll(self):
+        def_query = Apptools.defaultqueryitems(self)
+
+        Apptools.sql_run(self, def_query)
+        sqlite_query = "Select * from items where SellerUsername='"+G_USERNAME.get()+"';"
+        record = Apptools.sql_run(self, sqlite_query)
+        if record is not None:
+            out = record[0]
+            if out != []:
+                self.output(out)
+        if out == []:
+            messagebox.showinfo("No data", "No records found")
+
+    def output(self, out):
+        screen = tk.Toplevel(self, bg="#333333")
+        screen.iconphoto(False, Icon)
+        screen.title("Search Results")
+        screen.resizable(0, 0)
+
+        lbl = tk.Label(screen, text="Search Items")
+        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=0, column=0,padx=30,pady=10)
+
+        column=("Item no.","Item Name","Wholesale Price","Retail Price","Description","Stock")
+        listBox = ttk.Treeview(screen)
+
+        verscrlbar = ttk.Scrollbar(screen, orient ="vertical",command = listBox.yview)
+        verscrlbar.grid(row=1,column=1,sticky="nsw",rowspan=2)
+
+        listBox.config(selectmode="extended",columns=column,show="headings")
+        listBox.configure(yscrollcommand = verscrlbar.set)
+
+        for i in range(0, len(column)):
+            listBox.heading(column[i], text=column[i],command=lambda c=column[i]: self.sortby(listBox, c, 0))
+            listBox.column(column[i], minwidth=0)
+
+        for col in column:
+            listBox.heading(col, text=col)
+            listBox.column(col, width=tkFont.Font().measure(col.title()))
+        listBox.grid(row=1, column=0)
+
+        for i in out:
+            listBox.insert("", "end", values=i[:6])
+
+            for indx, val in enumerate(i[:6]):
+                ilen = tkFont.Font().measure(val)
+                if listBox.column(column[indx], width=None) < ilen:
+                    listBox.column(column[indx], width=ilen)
+
+    def sortby(self,tree, col, descending):
+        data = [(tree.set(child, col), child) for child in tree.get_children('')]
+
+        x=True
+
+        for a,b in data:
+            x=x and Apptools.check_digit(self,a)
+        if x:
+            for i in range(len(data)):
+                data[i]=list(data[i])
+                data[i][0]=int(data[i][0])
+        data.sort(reverse=descending)
+
+        for indx, item in enumerate(data):
+            tree.move(item[1], '', indx)
+
+        tree.heading(col,command=lambda col=col: self.sortby(tree, col, int(not descending)))
+
 
 class Page4_SellerRemoveItem(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master, bg="#333333")
         self.makeWidgets(master)
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_AdminProfileManagement))
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_SellerItemManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
@@ -2688,26 +2838,48 @@ class Page4_SellerRemoveItem(tk.Frame):
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=4, sticky="w")
 
-        lbl = tk.Label(self, text="Delete Account")
+        lbl = tk.Label(self, text="Remove Item")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=2,padx=30,pady=10)
 
-class Page4_SellerRecentTransactions(tk.Frame):
-    def __init__(self, master):
-        tk.Frame.__init__(self, master, bg="#333333")
-        self.makeWidgets(master)
-    def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_AdminProfileManagement))
-        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=0, sticky="w")
+        lbl = tk.Label(self, text="Item Code")
+        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=2, column=1,padx=5,pady=10)
 
-        btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
-        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        itemno=tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        itemno.grid(row=2, column=2)
 
-        lbl = tk.Label(self, text="Delete Account")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        btn=tk.Button(self,text="Delete Item")
+        btn.config(command=lambda: self.deleteitem(master,itemno.get()))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=3, column=3,pady=10)
+
+        lbl = tk.Label(self, text="Item Code can be found in\nSearch Items Section.")
+        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=6, column=2,padx=5,pady=10)
+
+    def deleteitem(self,master,itemno):
+        cond1=Apptools.check_digit(self,itemno)
+        if cond1:
+            def_query=Apptools.defaultqueryitems(self)
+            query="select iname,irp,idesc from items where itemno="+itemno+" and SellerUsername='"+G_USERNAME.get()+"';"
+            out = Apptools.sql_run(self, def_query,query)
+            if out:
+                data = out[1]
+                if data!=[]:
+                    data=data[0]
+                    txt="Name = "+data[0]+"\nPrice = "+str(data[1])+"\nDescription = "+data[2]
+                    choice = messagebox.askyesno("Alert", "Are you sure want to remove the item?\n"+txt)
+                    if choice:
+                        del_query="Delete from items where itemno = " + itemno + ";"
+                        rec = Apptools.sql_run(self, del_query)
+                        if rec is not None:
+                            messagebox.showinfo("Success","Item Removed Successfully")
+                            master.switch_frame(Page3_SellerItemManagement)
+                else:
+                    messagebox.showwarning("Invalid Item Code","Item Code is incorrect")
+        else:
+            messagebox.showwarning("Invalid Field","Fill all the forms correctly to continue")
 
 
 class Page4_BuyerShowProfile(tk.Frame):
