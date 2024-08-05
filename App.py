@@ -152,7 +152,7 @@ class Apptools:
         img = tk.Label(self, image=render)
         img.image = render
         if mode=='grid':
-            img.grid(row=xrow, column=ycolumn,rowspan=rspan,columnspan=cspan,padx=px,pady=py)
+            img.grid(row=xrow, column=ycolumn,rowspan=rspan,columnspan=cspan,padx=px,pady=py,sticky="ns")
         else:
             img.place(x=xrow,y=ycolumn,relx=0,rely=0)
 
@@ -607,29 +607,29 @@ class Homepage(tk.Frame):
         Apptools.image_Show(self, HOMEPAGEImgDir, 0, 0, 300, 450,rspan=10)
 
         lbl=tk.Label(self,text="Welcome to\nKans")
-        lbl.config(font=("Chiller", 30),fg="#E8E8E8",bg="#333333")
+        lbl.config(font=("Segoe UI",15),fg="#E8E8E8",bg="#333333")
         lbl.grid(row=1, column=2)
 
         lbl=tk.Label(self,text="Login")
-        lbl.config(font=("Chiller", 30),fg="#E8E8E8",bg="#333333")
+        lbl.config(font=("Segoe UI",15),fg="#E8E8E8",bg="#333333")
         lbl.grid(row=2, column=2)
 
         lbl=tk.Label(self,text="Username")
-        lbl.config(font=("Chiller", 20),fg="#E8E8E8",bg="#333333")
+        lbl.config(font=("Segoe UI", 10),fg="#E8E8E8",bg="#333333")
         lbl.grid(row=3, column=1,padx=5)
 
         username = tk.Entry(self, fg="#E8E8E8", bg="#333333")
         username.grid(row=3, column=2)
 
         lbl=tk.Label(self,text="Password")
-        lbl.config(font=("Chiller", 20),fg="#E8E8E8",bg="#333333")
+        lbl.config(font=("Segoe UI", 10),fg="#E8E8E8",bg="#333333")
         lbl.grid(row=4, column=1,padx=5)
 
         password = tk.Entry(self, show="*", fg="#E8E8E8", bg="#333333")
         password.grid(row=4, column=2)
 
         lbl=tk.Label(self,text="Login As")
-        lbl.config(font=("Chiller", 20),fg="#E8E8E8",bg="#333333")
+        lbl.config(font=("Segoe UI", 10),fg="#E8E8E8",bg="#333333")
         lbl.grid(row=5, column=1)
 
         user_type = StringVar(self, "Admin")
@@ -647,7 +647,7 @@ class Homepage(tk.Frame):
         btn.grid(row=8, column=3, padx=5)
 
         lbl=tk.Label(self,text="Not Registered?\nSignup Here")
-        lbl.config(font=("Chiller", 20),fg="#E8E8E8",bg="#333333")
+        lbl.config(font=("Segoe UI", 15),fg="#E8E8E8",bg="#333333")
         lbl.config(cursor="hand2")
         lbl.bind("<Button-1>",lambda e:master.switch_frame(Page2_Signup))
         lbl.grid(row=9, column=2)
@@ -685,7 +685,7 @@ class Page2_Signup(tk.Frame):
 
     def makeWidgets(self, master):
         lbl=tk.Label(self,text="Kans: You shopping partner")
-        lbl.config(font=("Chiller", 30),fg="#E8E8E8",bg="#333333")
+        lbl.config(font=("Segoe UI",15),fg="#E8E8E8",bg="#333333")
         lbl.grid(row=0, column=0,padx=10)
 
         lbl=tk.Label(self,text="Signup as")
@@ -708,7 +708,7 @@ class Page2_Signup(tk.Frame):
         btn.grid(row=6, column=0, padx=5,pady=10)
 
         lbl=tk.Label(self,text="Already Registered?\nLogin Here")
-        lbl.config(font=("Chiller", 20),fg="#E8E8E8",bg="#333333")
+        lbl.config(font=("Segoe UI", 15),fg="#E8E8E8",bg="#333333")
         lbl.config(cursor="hand2")
         lbl.bind("<Button-1>",lambda e:master.switch_frame(Homepage))
         lbl.grid(row=7, column=0)
@@ -731,92 +731,96 @@ class Page2_SignupAdmin(tk.Frame):
         self.makeWidgets(master)
 
     def makeWidgets(self, master):
-        Apptools.image_Show(self, SIGNUPPAGEImgDir[0], 0, 0, 100, 650,rspan=15)
+        frame = ScrollableFrame(self,ch=600,cw=585)
+        
+        Apptools.image_Show(frame.scrollable_frame, SIGNUPPAGEImgDir[0], 0, 0, 100, 650,rspan=15)
 
-        Apptools.image_Show(self, SIGNUPPAGEImgDir[1], 0, 4, 100, 650,rspan=15)
+        Apptools.image_Show(frame.scrollable_frame, SIGNUPPAGEImgDir[1], 0, 4, 100, 650,rspan=15)
 
-        lbl = tk.Label(self, text="Kans")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Kans")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=2)
 
-        lbl = tk.Label(self, text="Admin Signup")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Admin Signup")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=2)
 
-        lbl = tk.Label(self, text="Name")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Name")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=3, column=1,padx=5)
 
-        name = tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        name = tk.Entry(frame.scrollable_frame, fg="#E8E8E8", bg="#333333")
         name.grid(row=3, column=2)
 
-        lbl = tk.Label(self, text="Age")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Age")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=4, column=1,padx=5)
 
-        age = tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        age = tk.Entry(frame.scrollable_frame, fg="#E8E8E8", bg="#333333")
         age.grid(row=4, column=2)
 
-        lbl = tk.Label(self, text="Gender")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Gender")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=5, column=1,padx=5)
 
-        gender = StringVar(self, "M")
+        gender = StringVar(frame.scrollable_frame, "M")
         gen = {"Male": "M", "Female": "F", "Not specified": "N"}
         i = 5
         for (text, value) in gen.items():
-            rbtn=Radiobutton(self,text=text,variable=gender,value=value)
+            rbtn=Radiobutton(frame.scrollable_frame,text=text,variable=gender,value=value)
             rbtn.config(activebackground="#333333",bg="#333333",fg="#E8E8E8")
             rbtn.config(selectcolor="#333333")
             rbtn.grid(sticky="W", row=i, column=2,padx=15)
             i += 1
 
-        lbl = tk.Label(self, text="Mobile no.")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Mobile no.")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=8, column=1,padx=5)
 
-        MobNo = tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        MobNo = tk.Entry(frame.scrollable_frame, fg="#E8E8E8", bg="#333333")
         MobNo.grid(row=8, column=2)
 
-        lbl = tk.Label(self, text="PIN")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="PIN")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=9, column=1,padx=5)
 
-        Pin = tk.Entry(self, show="*", fg="#E8E8E8", bg="#333333")
+        Pin = tk.Entry(frame.scrollable_frame, show="*", fg="#E8E8E8", bg="#333333")
         Pin.grid(row=9, column=2)
 
-        lbl = tk.Label(self, text="Username")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Username")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=10, column=1,padx=5)
 
-        username = tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        username = tk.Entry(frame.scrollable_frame, fg="#E8E8E8", bg="#333333")
         username.grid(row=10, column=2)
 
-        lbl = tk.Label(self, text="Password")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Password")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=11, column=1,padx=5)
 
-        Password = tk.Entry(self, show="*", fg="#E8E8E8", bg="#333333")
+        Password = tk.Entry(frame.scrollable_frame, show="*", fg="#E8E8E8", bg="#333333")
         Password.grid(row=11, column=2)
 
-        lbl = tk.Label(self, text="Retype Password")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Retype Password")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=12, column=1,padx=5)
 
-        Repassword = tk.Entry(self, show="*", fg="#E8E8E8", bg="#333333")
+        Repassword = tk.Entry(frame.scrollable_frame, show="*", fg="#E8E8E8", bg="#333333")
         Repassword.grid(row=12, column=2)
 
-        button = tk.Button(self, text="Register")
+        button = tk.Button(frame.scrollable_frame, text="Register")
         button.config(command=lambda: self.RegisterAdmin(master,name.get(),age.get(),gender.get(),MobNo.get(),username.get(),Password.get(),Repassword.get(),Pin.get()))
         button.config(bg="#1F8EE7", fg="#E8E8E8", bd=0, activebackground="#3297E9")
         button.config(padx=5,pady=3)
         button.grid(row=13, column=3, pady=10,padx=20)
 
-        lbl=tk.Label(self,text="Already Registered?\nLogin Here")
-        lbl.config(font=("Chiller", 20),fg="#E8E8E8",bg="#333333")
+        lbl=tk.Label(frame.scrollable_frame,text="Already Registered?\nLogin Here")
+        lbl.config(font=("Segoe UI", 15),fg="#E8E8E8",bg="#333333")
         lbl.config(cursor="hand2")
         lbl.bind("<Button-1>",lambda e:master.switch_frame(Homepage))
         lbl.grid(row=14, column=2)
+
+        frame.grid(row=0,column=0)
 
     def RegisterAdmin(self,master,name,age,gender,mobno,user,pswd,repass,pin):
         if pswd == repass:
@@ -867,100 +871,104 @@ class Page2_SignupBuyer(tk.Frame):
         self.makeWidgets(master)
 
     def makeWidgets(self, master):
-        Apptools.image_Show(self, SIGNUPPAGEImgDir[0], 0, 0, 100, 650,rspan=16)
+        frame = ScrollableFrame(self,ch=600,cw=585)
+        
+        Apptools.image_Show(frame.scrollable_frame, SIGNUPPAGEImgDir[0], 0, 0, 100, 650,rspan=16)
 
-        Apptools.image_Show(self, SIGNUPPAGEImgDir[1], 0, 4, 100, 650,rspan=16)
+        Apptools.image_Show(frame.scrollable_frame, SIGNUPPAGEImgDir[1], 0, 4, 100, 650,rspan=16)
 
-        lbl = tk.Label(self, text="Kans")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Kans")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=2)
 
-        lbl = tk.Label(self, text="Buyer's Signup")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Buyer's Signup")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=2)
 
-        lbl = tk.Label(self, text="Name")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Name")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=3, column=1,padx=5)
 
-        name = tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        name = tk.Entry(frame.scrollable_frame, fg="#E8E8E8", bg="#333333")
         name.grid(row=3, column=2)
 
-        lbl = tk.Label(self, text="Age")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Age")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=4, column=1,padx=5)
 
-        age = tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        age = tk.Entry(frame.scrollable_frame, fg="#E8E8E8", bg="#333333")
         age.grid(row=4, column=2)
 
-        lbl = tk.Label(self, text="Gender")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Gender")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=5, column=1,padx=5)
 
         gender = StringVar(self, "M")
         gen = {"Male": "M", "Female": "F", "Not specified": "N"}
         i = 5
         for (text, value) in gen.items():
-            rbtn=Radiobutton(self,text=text,variable=gender,value=value)
+            rbtn=Radiobutton(frame.scrollable_frame,text=text,variable=gender,value=value)
             rbtn.config(activebackground="#333333",bg="#333333",fg="#E8E8E8")
             rbtn.config(selectcolor="#333333")
             rbtn.grid(sticky="W", row=i, column=2,padx=15)
             i += 1
 
-        lbl = tk.Label(self, text="Mobile no.")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Mobile no.")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=8, column=1,padx=5)
 
-        MobNo = tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        MobNo = tk.Entry(frame.scrollable_frame, fg="#E8E8E8", bg="#333333")
         MobNo.grid(row=8, column=2)
 
-        lbl = tk.Label(self, text="PIN")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="PIN")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=9, column=1,padx=5)
 
-        Pin = tk.Entry(self, show="*", fg="#E8E8E8", bg="#333333")
+        Pin = tk.Entry(frame.scrollable_frame, show="*", fg="#E8E8E8", bg="#333333")
         Pin.grid(row=9, column=2)
 
-        lbl = tk.Label(self, text="Username")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Username")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=10, column=1,padx=5)
 
-        username = tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        username = tk.Entry(frame.scrollable_frame, fg="#E8E8E8", bg="#333333")
         username.grid(row=10, column=2)
 
-        lbl = tk.Label(self, text="Password")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Password")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=11, column=1,padx=5)
 
-        Password = tk.Entry(self, show="*", fg="#E8E8E8", bg="#333333")
+        Password = tk.Entry(frame.scrollable_frame, show="*", fg="#E8E8E8", bg="#333333")
         Password.grid(row=11, column=2)
 
-        lbl = tk.Label(self, text="Retype Password")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Retype Password")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=12, column=1,padx=5)
 
-        Repassword = tk.Entry(self, show="*", fg="#E8E8E8", bg="#333333")
+        Repassword = tk.Entry(frame.scrollable_frame, show="*", fg="#E8E8E8", bg="#333333")
         Repassword.grid(row=12, column=2)
 
-        lbl = tk.Label(self, text="Delivery Address")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Delivery Address")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=13, column=1,padx=5)
 
-        DelAdd = tk.Text(self, fg="#E8E8E8", bg="#333333",height=5)
+        DelAdd = tk.Text(frame.scrollable_frame, fg="#E8E8E8", bg="#333333",height=5)
         DelAdd.config(width=15)
         DelAdd.grid(row=13, column=2)
 
-        button = tk.Button(self, text="Register")
+        button = tk.Button(frame.scrollable_frame, text="Register")
         button.config(command=lambda: self.RegisterBuyer(master,name.get(),age.get(),gender.get(),MobNo.get(),username.get(),Password.get(),Repassword.get(),Pin.get(),DelAdd.get("1.0","end-1c")))
         button.config(bg="#1F8EE7", fg="#E8E8E8", bd=0, activebackground="#3297E9")
         button.config(padx=5,pady=3)
         button.grid(row=14, column=3, pady=10,padx=20)
 
-        lbl=tk.Label(self,text="Already Registered?\nLogin Here")
-        lbl.config(font=("Chiller", 20),fg="#E8E8E8",bg="#333333")
+        lbl=tk.Label(frame.scrollable_frame,text="Already Registered?\nLogin Here")
+        lbl.config(font=("Segoe UI", 15),fg="#E8E8E8",bg="#333333")
         lbl.config(cursor="hand2")
         lbl.bind("<Button-1>",lambda e:master.switch_frame(Homepage))
         lbl.grid(row=15, column=2)
+
+        frame.grid(row=0,column=0)
 
     def RegisterBuyer(self,master,name,age,gender,mobno,user,pswd,repass,pin,DelAdd):
         if pswd == repass:
@@ -1014,107 +1022,112 @@ class Page2_SignupSeller(tk.Frame):
         self.makeWidgets(master)
 
     def makeWidgets(self, master):
-        Apptools.image_Show(self, SIGNUPPAGEImgDir[0], 0, 0, 100, 650,rspan=17)
 
-        Apptools.image_Show(self, SIGNUPPAGEImgDir[1], 0, 4, 100, 650,rspan=17)
+        frame = ScrollableFrame(self,ch=600,cw=585)
+        
+        Apptools.image_Show(frame.scrollable_frame, SIGNUPPAGEImgDir[0], 0, 0, 100, 650,rspan=17)
 
-        lbl = tk.Label(self, text="Kans")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        Apptools.image_Show(frame.scrollable_frame, SIGNUPPAGEImgDir[1], 0, 4, 100, 650,rspan=17)
+
+        lbl = tk.Label(frame.scrollable_frame, text="Kans")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=2)
 
-        lbl = tk.Label(self, text="Seller's Signup")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Seller's Signup")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=2)
 
-        lbl = tk.Label(self, text="Name")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Name")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=3, column=1,padx=5)
 
-        name = tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        name = tk.Entry(frame.scrollable_frame, fg="#E8E8E8", bg="#333333")
         name.grid(row=3, column=2)
 
-        lbl = tk.Label(self, text="Age")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Age")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=4, column=1,padx=5)
 
-        age = tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        age = tk.Entry(frame.scrollable_frame, fg="#E8E8E8", bg="#333333")
         age.grid(row=4, column=2)
 
-        lbl = tk.Label(self, text="Gender")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Gender")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=5, column=1,padx=5)
 
         gender = StringVar(self, "M")
         gen = {"Male": "M", "Female": "F", "Not specified": "N"}
         i = 5
         for (text, value) in gen.items():
-            rbtn=Radiobutton(self,text=text,variable=gender,value=value)
+            rbtn=Radiobutton(frame.scrollable_frame,text=text,variable=gender,value=value)
             rbtn.config(activebackground="#333333",bg="#333333",fg="#E8E8E8")
             rbtn.config(selectcolor="#333333")
             rbtn.grid(sticky="W", row=i, column=2,padx=15)
             i += 1
 
-        lbl = tk.Label(self, text="Mobile no.")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Mobile no.")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=8, column=1,padx=5)
 
-        MobNo = tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        MobNo = tk.Entry(frame.scrollable_frame, fg="#E8E8E8", bg="#333333")
         MobNo.grid(row=8, column=2)
 
-        lbl = tk.Label(self, text="PIN")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="PIN")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=9, column=1,padx=5)
 
-        Pin = tk.Entry(self, show="*", fg="#E8E8E8", bg="#333333")
+        Pin = tk.Entry(frame.scrollable_frame, show="*", fg="#E8E8E8", bg="#333333")
         Pin.grid(row=9, column=2)
 
-        lbl = tk.Label(self, text="Username")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Username")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=10, column=1,padx=5)
 
-        username = tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        username = tk.Entry(frame.scrollable_frame, fg="#E8E8E8", bg="#333333")
         username.grid(row=10, column=2)
 
-        lbl = tk.Label(self, text="Password")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Password")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=11, column=1,padx=5)
 
-        Password = tk.Entry(self, show="*", fg="#E8E8E8", bg="#333333")
+        Password = tk.Entry(frame.scrollable_frame, show="*", fg="#E8E8E8", bg="#333333")
         Password.grid(row=11, column=2)
 
-        lbl = tk.Label(self, text="Retype Password")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Retype Password")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=12, column=1,padx=5)
 
-        Repassword = tk.Entry(self, show="*", fg="#E8E8E8", bg="#333333")
+        Repassword = tk.Entry(frame.scrollable_frame, show="*", fg="#E8E8E8", bg="#333333")
         Repassword.grid(row=12, column=2)
 
-        lbl = tk.Label(self, text="Name of Organisation")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Name of Organisation")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=13, column=1,padx=5)
 
-        orgname = tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        orgname = tk.Entry(frame.scrollable_frame, fg="#E8E8E8", bg="#333333")
         orgname.grid(row=13, column=2)
 
-        lbl = tk.Label(self, text="Address of Organisation")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Address of Organisation")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=14, column=1,padx=5)
 
-        OrgAdd = tk.Text(self, fg="#E8E8E8", bg="#333333",height=5)
+        OrgAdd = tk.Text(frame.scrollable_frame, fg="#E8E8E8", bg="#333333",height=5)
         OrgAdd.config(width=15)
         OrgAdd.grid(row=14, column=2)
 
-        button = tk.Button(self, text="Register")
+        button = tk.Button(frame.scrollable_frame, text="Register")
         button.config(command=lambda: self.RegisterSeller(master,name.get(),age.get(),gender.get(),MobNo.get(),username.get(),Password.get(),Repassword.get(),Pin.get(),orgname.get(),OrgAdd.get("1.0","end-1c")))
         button.config(bg="#1F8EE7", fg="#E8E8E8", bd=0, activebackground="#3297E9")
         button.config(padx=5,pady=3)
         button.grid(row=15, column=3, pady=10,padx=20)
 
-        lbl=tk.Label(self,text="Already Registered?\nLogin Here")
-        lbl.config(font=("Chiller", 20),fg="#E8E8E8",bg="#333333")
+        lbl=tk.Label(frame.scrollable_frame,text="Already Registered?\nLogin Here")
+        lbl.config(font=("Segoe UI", 15),fg="#E8E8E8",bg="#333333")
         lbl.config(cursor="hand2")
         lbl.bind("<Button-1>",lambda e:master.switch_frame(Homepage))
         lbl.grid(row=16, column=2)
+
+        frame.grid(row=0,column=0)
 
     def RegisterSeller(self,master,name,age,gender,mobno,user,pswd,repass,pin,OrgName,OrgAdd):
         if pswd == repass:
@@ -1166,11 +1179,11 @@ class Page3_DashboardAdmin(tk.Frame):
         self.makeWidgets(master)
     def makeWidgets(self, master):
         lbl = tk.Label(self, text="Kans:Your Shopping Partner")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=0, column=0,padx=20,pady=10)
 
         lbl = tk.Label(self, text="Admin Console")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=0)
 
         lbl = tk.Label(self, text=G_NAME.get())
@@ -1199,11 +1212,11 @@ class Page3_DashboardSeller(tk.Frame):
 
     def makeWidgets(self, master):
         lbl = tk.Label(self, text="Kans:Your Shopping Partner")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=0, column=0,padx=20,pady=10)
 
         lbl = tk.Label(self, text="Seller's Console")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=0)
 
         lbl = tk.Label(self, text=G_NAME.get())
@@ -1234,11 +1247,11 @@ class Page3_DashboardBuyer(tk.Frame):
         self.makeWidgets(master)
     def makeWidgets(self, master):
         lbl = tk.Label(self, text="Kans:Your Shopping Partner")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=0, column=0,padx=20,pady=10)
 
         lbl = tk.Label(self, text="Buyer's Dashboard")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=0)
 
         lbl = tk.Label(self, text=G_NAME.get())
@@ -1281,11 +1294,11 @@ class Page3_AdminProfileManagement(tk.Frame):
         btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Kans:Your Shopping Partner")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,padx=20,pady=10)
 
         lbl = tk.Label(self, text="Profile Management")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1)
 
         Apptools.image_Show(self, DASHBOARDImgDir, 3, 1, 200, 150)
@@ -1321,11 +1334,11 @@ class Page3_AdminWalletManagement(tk.Frame):
         btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Kans:Your Shopping Partner")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,padx=20,pady=10)
 
         lbl = tk.Label(self, text="Wallet Management")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1)
 
         Apptools.image_Show(self, DASHBOARDImgDir, 3, 1, 200, 150)
@@ -1360,11 +1373,11 @@ class Page3_SellerProfileManagement(tk.Frame):
         btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Kans:Your Shopping Partner")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,padx=20,pady=10)
 
         lbl = tk.Label(self, text="Profile Management")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1)
 
         Apptools.image_Show(self, DASHBOARDImgDir, 3, 1, 200, 150)
@@ -1397,11 +1410,11 @@ class Page3_SellerWalletManagement(tk.Frame):
         btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Kans:Your Shopping Partner")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,padx=20,pady=10)
 
         lbl = tk.Label(self, text="Wallet Management")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1)
 
         Apptools.image_Show(self, DASHBOARDImgDir, 3, 1, 200, 150)
@@ -1434,11 +1447,11 @@ class Page3_SellerItemManagement(tk.Frame):
         btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Kans:Your Shopping Partner")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,padx=20,pady=10)
 
         lbl = tk.Label(self, text="Item Management")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1)
 
         Apptools.image_Show(self, DASHBOARDImgDir, 3, 1, 200, 150)
@@ -1481,11 +1494,11 @@ class Page3_BuyerProfileManagement(tk.Frame):
         btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Kans:Your Shopping Partner")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,padx=20,pady=10)
 
         lbl = tk.Label(self, text="Profile Management")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1)
 
         Apptools.image_Show(self, DASHBOARDImgDir, 3, 1, 200, 150)
@@ -1521,18 +1534,18 @@ class Page3_BuyerPremium(tk.Frame):
         btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Kans:Your Shopping Partner")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,padx=20,pady=10)
 
         lbl = tk.Label(self, text="Premium Membership")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1)
 
         txt='''Get Enjoying Benefits like
         Free Delivery
         Exclusive Bargains and a lot more.'''
         lbl = tk.Label(self, text=txt)
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=3, column=1,pady=10)
 
         if self.CheckIsPremium():
@@ -1543,7 +1556,7 @@ class Page3_BuyerPremium(tk.Frame):
             txt='''You are going to be charged Rs 100 from your wallet for
             activating Lifetime Premium membership'''
             lbl = tk.Label(self, text=txt)
-            lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+            lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
             lbl.grid(row=4, column=1,pady=10)
 
             btn=tk.Button(self,text="Go Premium",command=lambda: self.getmembership(master))
@@ -1596,11 +1609,11 @@ class Page3_BuyerShoppe(tk.Frame):
         btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Kans:Your Shopping Partner")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,padx=20,pady=10)
 
         lbl = tk.Label(self, text="Start Shopping!")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1)
 
         Apptools.image_Show(self, DASHBOARDImgDir, 3, 1, 200, 150)
@@ -1637,11 +1650,11 @@ class Page3_BuyerWallet(tk.Frame):
         btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Kans:Your Shopping Partner")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,padx=20,pady=10)
 
         lbl = tk.Label(self, text="Wallet Management")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1)
 
         Apptools.image_Show(self, DASHBOARDImgDir, 3, 1, 200, 150)
@@ -1672,7 +1685,7 @@ class Page4_AdminShowProfile(tk.Frame):
         btn.grid(row=0, column=3, sticky="e")
 
         lbl = tk.Label(self, text="Profile")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,padx=20,pady=10,columnspan=2)
 
         Fieldname=["Name","Age","Gender","Mobile No."]
@@ -1711,7 +1724,7 @@ class Page4_AdminEditProfile(tk.Frame):
         btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Modify Profile")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=3,padx=20,pady=10)
 
         query="select Name,age,MobNo,Gender from logindataadmin where username=%s;"
@@ -1793,11 +1806,11 @@ class Page4_AdminCheckBalance(tk.Frame):
         btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Check Balance")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Enter PIN")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=20,pady=10)
 
         pin=tk.Entry(self, fg="#E8E8E8", bg="#333333",show="*")
@@ -1841,11 +1854,11 @@ class Page4_AdminDeleteAccount(tk.Frame):
         btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Delete Account")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Enter PIN")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=20,pady=10)
 
         pin=tk.Entry(self, fg="#E8E8E8", bg="#333333",show="*")
@@ -1929,18 +1942,18 @@ class Page4_AdminCashout(tk.Frame):
         btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Cash withdrawl")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=3,pady=10)
 
         lbl = tk.Label(self, text="Enter Username")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=5,pady=10)
 
         username=tk.Entry(self, fg="#E8E8E8", bg="#333333")
         username.grid(row=2, column=2)
 
         lbl=tk.Label(self,text="User Type")
-        lbl.config(font=("Chiller", 20),fg="#E8E8E8",bg="#333333")
+        lbl.config(font=("Segoe UI", 10),fg="#E8E8E8",bg="#333333")
         lbl.grid(row=3, column=1)
 
         user_type = StringVar(self, "Admin")
@@ -1954,14 +1967,14 @@ class Page4_AdminCashout(tk.Frame):
             i += 1
 
         lbl = tk.Label(self, text="Enter Withdrawl amount")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=6, column=1,padx=5,pady=10)
 
         amt=tk.Entry(self, fg="#E8E8E8", bg="#333333")
         amt.grid(row=6, column=2)
 
         lbl = tk.Label(self, text="Enter KEY")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=7, column=1,padx=5,pady=10)
 
         key=tk.Entry(self, fg="#E8E8E8", bg="#333333")
@@ -2008,7 +2021,7 @@ class Page4_AdminCashout(tk.Frame):
                                                     messagebox.showinfo("Success!","Cashout Successful")
 
                                                     lbl = tk.Label(self, text="Withdrawl Amount : "+amt+"\nAmount to be Paid : "+str(kbal-5)+"\nPG & Service Charges : 5")
-                                                    lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+                                                    lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
                                                     lbl.grid(row=9, column=1,columnspan=3,padx=5,pady=10)
                                         else:
                                             messagebox.showerror("Cashout not possible!","You can take cashout of your own personal account")
@@ -2044,11 +2057,11 @@ class Page4_AdminSelfCashoutRequest(tk.Frame):
         btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Self Cashout Request")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Enter PIN")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=20,pady=10)
 
         pin=tk.Entry(self, fg="#E8E8E8", bg="#333333",show="*")
@@ -2114,18 +2127,18 @@ class Page4_AdminTopupWallet(tk.Frame):
         btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Top-Up Account")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Enter Username")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=5,pady=10)
 
         username=tk.Entry(self, fg="#E8E8E8", bg="#333333")
         username.grid(row=2, column=2)
 
         lbl=tk.Label(self,text="User Type")
-        lbl.config(font=("Chiller", 20),fg="#E8E8E8",bg="#333333")
+        lbl.config(font=("Segoe UI", 10),fg="#E8E8E8",bg="#333333")
         lbl.grid(row=3, column=1)
 
         user_type = StringVar(self, "Admin")
@@ -2139,14 +2152,14 @@ class Page4_AdminTopupWallet(tk.Frame):
             i += 1
 
         lbl = tk.Label(self, text="Enter Topup Amount")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=6, column=1,padx=5,pady=10)
 
         amt=tk.Entry(self, fg="#E8E8E8", bg="#333333")
         amt.grid(row=6, column=2)
 
         lbl = tk.Label(self, text="Enter your PIN")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=7, column=1,padx=20,pady=10)
 
         pin=tk.Entry(self, fg="#E8E8E8", bg="#333333",show="*")
@@ -2186,7 +2199,7 @@ class Page4_AdminTopupWallet(tk.Frame):
                                             messagebox.showinfo("Transaction successful!","Transferred Rs. "+netamt+" to user "+name+" Successfully\nAsk user to check his account")
                                             msg="Transaction Receipt\nName : {0}\nNet Amount Recharged : {1}\nPG & Other Charge : 5\nCash Given by user : {2}".format(name,netamt,amt).strip()
                                             lbl = tk.Label(self, text=msg)
-                                            lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+                                            lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
                                             lbl.grid(row=9, column=1,columnspan=3,pady=10,padx=5)
                                     else:
                                         messagebox.showerror("TopUp not possible!","You can take topup your own personal account")
@@ -2216,7 +2229,7 @@ class Page4_AdminPendingCashout(tk.Frame):
         btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Pending Cashout")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,padx=30,pady=10)
 
         self.pendingcashout()
@@ -2237,7 +2250,7 @@ class Page4_AdminPendingCashout(tk.Frame):
                 messagebox.showinfo("No pending cashout(s)", "No records found")
 
                 lbl = tk.Label(self, text="No pending cashout(s)")
-                lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+                lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
                 lbl.grid(row=2, column=1,padx=30,pady=10)
 
     def output(self, out):
@@ -2297,7 +2310,7 @@ class Page4_SellerShowProfile(tk.Frame):
         btn.grid(row=0, column=3, sticky="e")
 
         lbl = tk.Label(self, text="Profile")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=2,padx=60,pady=10)
 
         Fieldname=["Name","Age","Gender","Mobile No.","Name of Organisation","Address of Organisation"]
@@ -2335,7 +2348,7 @@ class Page4_SellerEditProfile(tk.Frame):
         btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Modify Profile")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=3,padx=20,pady=10)
 
         query="select Name,age,MobNo,orgName,AddOrg,Gender from logindataseller where username=%s;"
@@ -2426,11 +2439,11 @@ class Page4_SellerCheckBalance(tk.Frame):
         btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Check Balance")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Enter PIN")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=20,pady=10)
 
         pin=tk.Entry(self, fg="#E8E8E8", bg="#333333",show="*")
@@ -2472,18 +2485,18 @@ class Page4_SellerCashoutRequest(tk.Frame):
         btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Self Cashout Request")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Enter Balance")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=20,pady=10)
 
         amt=tk.Entry(self, fg="#E8E8E8", bg="#333333")
         amt.grid(row=2, column=2)
 
         lbl = tk.Label(self, text="Enter PIN")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=3, column=1,padx=20,pady=10)
 
         pin=tk.Entry(self, fg="#E8E8E8", bg="#333333",show="*")
@@ -2546,7 +2559,7 @@ class Page4_SellerWalletRecharge(tk.Frame):
         btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Wallet Recharge Info")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,padx=30,pady=10)
 
         msg="""To recharge your wallet you must go to our admin locations,
@@ -2554,7 +2567,7 @@ class Page4_SellerWalletRecharge(tk.Frame):
         PG Charges of Rs. 5 irrespective of amount is applicable.
         Never share your personal details like your PIN,Password etc with admin."""
         lbl = tk.Label(self, text=msg)
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=30,pady=10)
 
 class Page4_SellerDeleteAccount(tk.Frame):
@@ -2571,11 +2584,11 @@ class Page4_SellerDeleteAccount(tk.Frame):
         btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Delete Account")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Enter PIN")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=20,pady=10)
 
         pin=tk.Entry(self, fg="#E8E8E8", bg="#333333",show="*")
@@ -2635,39 +2648,39 @@ class Page4_SellerAddItems(tk.Frame):
         btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Add Items")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Item Name")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=5,pady=10)
 
         Iname=tk.Entry(self, fg="#E8E8E8", bg="#333333")
         Iname.grid(row=2, column=2)
 
         lbl = tk.Label(self, text="Wholesale Price")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=3, column=1,padx=5,pady=10)
 
         Iwhp=tk.Entry(self, fg="#E8E8E8", bg="#333333")
         Iwhp.grid(row=3, column=2)
 
         lbl = tk.Label(self, text="Retail Price")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=4, column=1,padx=5,pady=10)
 
         Irp=tk.Entry(self, fg="#E8E8E8", bg="#333333")
         Irp.grid(row=4, column=2)
 
         lbl = tk.Label(self, text="No. of Stocks")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=5, column=1,padx=5,pady=10)
 
         Istock=tk.Entry(self, fg="#E8E8E8", bg="#333333")
         Istock.grid(row=5, column=2)
 
         lbl = tk.Label(self, text="Description")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=6, column=1,padx=5,pady=10)
 
         IDesc = tk.Text(self, fg="#E8E8E8", bg="#333333",height=5)
@@ -2675,7 +2688,7 @@ class Page4_SellerAddItems(tk.Frame):
         IDesc.grid(row=6, column=2)
 
         lbl = tk.Label(self, text="Category")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=7, column=1,padx=5,pady=10)
 
         Category = ["Stationary","Electronics","Clothing","Beauty",
@@ -2688,7 +2701,7 @@ class Page4_SellerAddItems(tk.Frame):
         Menu.grid(row=7, column=2)
 
         lbl = tk.Label(self, text="Add Image")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=8, column=1,padx=5,pady=10)
 
         globals()['savlocimgbtn']=DEFAULTIMAGEDir
@@ -2702,19 +2715,23 @@ class Page4_SellerAddItems(tk.Frame):
     def additem(self,master,iname,iwp,irp,istock,idesc,icat,filedir):
         cond1=Apptools.is_not_null(self, iname, iwp, irp, istock, idesc,icat,filedir)
         cond2=Apptools.check_digit(self, iwp,irp,istock)
-        cond3=float(irp)>=float(iwp)
+        cond3=cond1 and float(irp)>=float(iwp)
         if cond1 and cond2 and cond3:
             rec=Apptools.defaultqueryrun(self,"items")
 
             if rec:
-                ino=Apptools.generate_id(self,"items","itemno")
-                rec2=Apptools.insertSQL(self,"items",int(ino),iname,float(iwp),float(irp),idesc,icat,int(istock),filedir,G_USERNAME.get())
+                if float(istock)>=0 and round(float(istock))==float(istock):
+                    ino=Apptools.generate_id(self,"items","itemno")
+                    rec2=Apptools.insertSQL(self,"items",int(ino),iname,float(iwp),float(irp),idesc,icat,int(istock),filedir,G_USERNAME.get())
 
-                if rec2 is not None:
-                    messagebox.showinfo("Success!","Item added successfully")
-                    master.switch_frame(Page3_SellerItemManagement)
+                    if rec2 is not None:
+                        messagebox.showinfo("Success!","Item added successfully")
+                        master.switch_frame(Page3_SellerItemManagement)
+                else:
+                    messagebox.showwarning("Invalid Input","Enter a valid no. of Stock (>=0)")
+
         else:
-            if not(cond3):
+            if cond1 and not(cond3):
                 messagebox.showwarning("Invalid Input","Wholesale must be less than or equal to retail price")
             else:
                 messagebox.showwarning("Invalid Input","Fill all the forms correctly to continue")
@@ -2725,6 +2742,7 @@ class Page4_SellerModifyItems(tk.Frame):
         tk.Frame.__init__(self, master, bg="#333333")
         self.makeWidgets(master)
     def makeWidgets(self, master):
+        
         btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_SellerItemManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
@@ -2734,11 +2752,11 @@ class Page4_SellerModifyItems(tk.Frame):
         btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Modify Item Details")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Item Code")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=5,pady=10)
 
         itemno=tk.Entry(self, fg="#E8E8E8", bg="#333333")
@@ -2750,10 +2768,15 @@ class Page4_SellerModifyItems(tk.Frame):
         btn.grid(row=3, column=3,pady=10)
 
         lbl = tk.Label(self, text="Item Code can be found in\nSearch Items Section.")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=11, column=1,columnspan=3,padx=5,pady=10)
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=6, column=1,columnspan=3,padx=5,pady=10)
 
     def modify(self,master,itemno):
+        sep = ttk.Separator(self,orient='horizontal')
+        sep.grid(row=4,column=0,columnspan=5,sticky="ews")
+        
+        frame = ScrollableFrame(self,ch=350,cw=385)
+        sframe=frame.scrollable_frame
         cond1=Apptools.check_digit(self,itemno)
         if cond1:
             rec=Apptools.defaultqueryrun(self,"items")
@@ -2767,48 +2790,49 @@ class Page4_SellerModifyItems(tk.Frame):
                     data=data[0]
                     Entry_Obj=[]
                     Fieldname=["Item Name","Wholesale Price","Retail Price","Description"]
-                    for i in range(3):
-                        lbl = tk.Label(self, text=Fieldname[i])
-                        lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
-                        lbl.grid(row=i+4, column=1,padx=20,pady=5)
 
-                        Entry_Obj.append(tk.Entry(self, fg="#E8E8E8", bg="#333333"))
-                        Entry_Obj[i].grid(row=i+4, column=2)
+                    for i in range(3):
+                        lbl = tk.Label(sframe, text=Fieldname[i])
+                        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
+                        lbl.grid(row=i, column=1,padx=20,pady=5)
+
+                        Entry_Obj.append(tk.Entry(sframe, fg="#E8E8E8", bg="#333333"))
+                        Entry_Obj[i].grid(row=i, column=2)
                         Entry_Obj[i].insert(0, data[i])
 
-                    lbl = tk.Label(self, text=Fieldname[3])
-                    lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
-                    lbl.grid(row=7, column=1,padx=20,pady=5)
+                    lbl = tk.Label(sframe, text=Fieldname[3])
+                    lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
+                    lbl.grid(row=3, column=1,padx=20,pady=5)
 
-                    Entry_Obj.append(tk.Text(self, fg="#E8E8E8", bg="#333333",height=5))
+                    Entry_Obj.append(tk.Text(sframe, fg="#E8E8E8", bg="#333333",height=5))
                     Entry_Obj[3].config(width=15)
-                    Entry_Obj[3].grid(row=7, column=2)
+                    Entry_Obj[3].grid(row=3, column=2)
                     Entry_Obj[3].insert(tk.INSERT, data[3])
 
-                    lbl = tk.Label(self, text="Category")
-                    lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
-                    lbl.grid(row=8, column=1,padx=5,pady=10)
+                    lbl = tk.Label(sframe, text="Category")
+                    lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
+                    lbl.grid(row=4, column=1,padx=5,pady=10)
 
                     Category = ["Stationary","Electronics","Clothing","Beauty",
                                 "Softwares","Sports","Daily Use","Grocery","Health","Others"]
 
                     CategoryVar = StringVar(self, data[5].title())
-                    Menu = tk.OptionMenu(self, CategoryVar, *Category)
+                    Menu = tk.OptionMenu(sframe, CategoryVar, *Category)
                     Menu.config(bg="#333333", bd=0, fg="#E8E8E8", activebackground="#333333")
                     Menu["menu"].config(bg="#333333", fg="#E8E8E8", activebackground="#1F8EE7")
-                    Menu.grid(row=8, column=2)
+                    Menu.grid(row=4, column=2)
 
-                    lbl = tk.Label(self, text="Add Image")
-                    lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
-                    lbl.grid(row=9, column=1,padx=5,pady=10)
+                    lbl = tk.Label(sframe, text="Add Image")
+                    lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
+                    lbl.grid(row=5, column=1,padx=5,pady=10)
 
                     globals()['savlocimgbtn']=data[4]
-                    Apptools.imgsavebtn(self,savlocimgbtn,100,100,9,2,data[4])
+                    Apptools.imgsavebtn(sframe,savlocimgbtn,100,100,5,2,data[4])
 
-                    btn=tk.Button(self,text="Modify Details")
+                    btn=tk.Button(sframe,text="Modify Details")
                     btn.config(command=lambda: self.modifyDetails(master,itemno,Entry_Obj[0].get(),Entry_Obj[1].get(),Entry_Obj[2].get(),Entry_Obj[3].get("1.0","end-1c"),CategoryVar.get(),savlocimgbtn))
                     btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-                    btn.grid(row=10, column=3,pady=10)
+                    btn.grid(row=6, column=3,pady=10)
 
                 else:
                     messagebox.showwarning("Invalid Item Code","Item Code is incorrect")
@@ -2816,12 +2840,14 @@ class Page4_SellerModifyItems(tk.Frame):
         else:
             messagebox.showwarning("Invalid Field","Fill all the forms correctly to continue")
 
+        frame.grid(row=5,column=0,columnspan=5)
+
 
 
     def modifyDetails(self,master,itemno,iname,iwhp,irp,idesc,icat,filedir):
         cond1=Apptools.is_not_null(self, iname, iwhp, irp, idesc,icat,filedir)
         cond2=Apptools.check_digit(self, iwhp,irp)
-        cond4=float(irp)>=float(iwhp)
+        cond4=cond1 and float(irp)>=float(iwhp)
         Category = ["Stationary","Electronics","Clothing","Beauty",
                                 "Softwares","Sports","Daily Use","Grocery","Health","Others"]
         cond3=icat.title() in Category
@@ -2836,7 +2862,7 @@ class Page4_SellerModifyItems(tk.Frame):
                     master.switch_frame(Page3_SellerItemManagement)
 
         else:
-            if not(cond4):
+            if cond1 and not(cond4):
                 messagebox.showwarning("Invalid Input","Wholesale must be less than or equal to retail price")
             else:
                 messagebox.showwarning("Invalid Input","Fill all the forms correctly to continue")
@@ -2858,11 +2884,11 @@ class Page4_SellerAddStocks(tk.Frame):
         btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Add Stocks")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Item Code")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=5,pady=10)
 
         itemno=tk.Entry(self, fg="#E8E8E8", bg="#333333")
@@ -2874,7 +2900,7 @@ class Page4_SellerAddStocks(tk.Frame):
         btn.grid(row=3, column=3,pady=10)
 
         lbl = tk.Label(self, text="Item Code can be found in\nSearch Items Section.")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=6, column=1,columnspan=3,padx=5,pady=10)
 
     def modify(self,master,itemno):
@@ -2939,11 +2965,11 @@ class Page4_SellerSearchItem(tk.Frame):
         btn.grid(row=0, column=5, sticky="e")
 
         lbl = tk.Label(self, text="Search Items")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=4,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Search Criteria")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=5,pady=10)
 
         Searchcr = ["Item Name","Wholesale Price","Retail Price","Description","Category"]
@@ -2955,7 +2981,7 @@ class Page4_SellerSearchItem(tk.Frame):
         Menu.grid(row=2, column=2)
 
         lbl = tk.Label(self, text="Enter Value")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=3, column=1,padx=5,pady=10)
 
         val=tk.Entry(self, fg="#E8E8E8", bg="#333333")
@@ -3045,7 +3071,7 @@ class Page4_SellerSearchItem(tk.Frame):
         screen.resizable(0, 0)
 
         lbl = tk.Label(screen, text="Search Items")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=0, column=0,padx=30,pady=10)
 
         column=("Item no.","Item Name","Wholesale Price","Retail Price","Description","Category","Stock")
@@ -3120,11 +3146,11 @@ class Page4_SellerRemoveItem(tk.Frame):
         btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Remove Item")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Item Code")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=5,pady=10)
 
         itemno=tk.Entry(self, fg="#E8E8E8", bg="#333333")
@@ -3136,7 +3162,7 @@ class Page4_SellerRemoveItem(tk.Frame):
         btn.grid(row=3, column=3,pady=10)
 
         lbl = tk.Label(self, text="Item Code can be found in\nSearch Items Section.")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=6, column=1,columnspan=3,padx=5,pady=10)
 
     def deleteitem(self,master,itemno):
@@ -3169,22 +3195,28 @@ class Page4_SellerRecentTransactions(tk.Frame):
         tk.Frame.__init__(self, master, bg="#333333")
         self.makeWidgets(master)
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_SellerItemManagement))
+
+        frame = ScrollableFrame(self,ch=300,cw=585)
+        sframe=frame.scrollable_frame
+        
+        btn=tk.Button(sframe,text="Go Back",command=lambda: master.switch_frame(Page3_SellerItemManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
-        btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
+        btn=tk.Button(sframe,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=3, sticky="e")
 
-        lbl = tk.Label(self, text="Transaction Log")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(sframe, text="Transaction Log")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=0,columnspan=4,padx=30,pady=10)
 
-        self.recentlybrought()
+        self.recentlybrought(sframe)
+
+        frame.grid(row=0,column=0)
 
 
-    def recentlybrought(self):
+    def recentlybrought(self,sframe):
         rec=Apptools.defaultqueryrun(self,"trecord")
         query="Select * from trecord where SellerUsername=%s;"
         out=Apptools.sql_run(self,[query,(G_USERNAME.get(),)])
@@ -3192,19 +3224,14 @@ class Page4_SellerRecentTransactions(tk.Frame):
         if out is not None and rec:
             out=out[0]
             if out!=[]:
-                self.output(out)
+                self.output(out,sframe)
             else:
                 messagebox.showinfo( "No records found","No recent transactions")
 
-    def output(self, out):
+    def output(self, out,sframe):
         column = ("Transaction Unique Id","Transaction Id","Date and Time","Item name","Quantity","Amount Paid","Buyer Name","Seller Organisation")
 
-        listBox = ttk.Treeview(self,selectmode="extended",columns=column,show="headings")
-
-        verscrlbar = ttk.Scrollbar(self, orient ="vertical",command = listBox.yview)
-        verscrlbar.grid(row=2,column=2,sticky="nsw",rowspan=2)
-
-        listBox.configure(yscrollcommand = verscrlbar.set)
+        listBox = ttk.Treeview(sframe,selectmode="extended",columns=column,show="headings")
 
         for i in range(len(column)):
             listBox.heading(column[i], text=column[i],command=lambda c=column[i]: self.sortby(listBox, c, 0))
@@ -3261,7 +3288,7 @@ class Page4_BuyerShowProfile(tk.Frame):
         btn.grid(row=0, column=3, sticky="e")
 
         lbl = tk.Label(self, text="Profile")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=2,padx=30,pady=10)
 
         Fieldname=["Name","Age","Gender","Mobile No.","Premium Member","Delivery Address"]
@@ -3304,7 +3331,7 @@ class Page4_BuyerEditProfile(tk.Frame):
         btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Modify Profile")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=3,padx=20,pady=10)
 
         query="select Name,age,MobNo,deladd,gender from logindatabuyer where username=%s;"
@@ -3385,22 +3412,27 @@ class Page4_BuyerRecentlyBrought(tk.Frame):
         tk.Frame.__init__(self, master, bg="#333333")
         self.makeWidgets(master)
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_BuyerProfileManagement))
+
+        frame = ScrollableFrame(self,ch=300,cw=585)
+        
+        btn=tk.Button(frame.scrollable_frame,text="Go Back",command=lambda: master.switch_frame(Page3_BuyerProfileManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
-        btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
+        btn=tk.Button(frame.scrollable_frame,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=3, sticky="e")
 
-        lbl = tk.Label(self, text="Recently Brought")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(frame.scrollable_frame, text="Recently Brought")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=0,columnspan=4,padx=30,pady=10)
 
-        self.recentlybrought()
+        self.recentlybrought(frame.scrollable_frame)
+
+        frame.grid(row=0,column=0)
 
 
-    def recentlybrought(self):
+    def recentlybrought(self,sframe):
         rec=Apptools.defaultqueryrun(self,"trecord")
         query="Select * from trecord where BuyerUsername=%s;"
         out=Apptools.sql_run(self,[query,(G_USERNAME.get(),)])
@@ -3408,23 +3440,18 @@ class Page4_BuyerRecentlyBrought(tk.Frame):
         if out is not None and rec:
             out=out[0]
             if out!=[]:
-                self.output(out)
+                self.output(out,sframe)
             else:
                 messagebox.showinfo( "No records found","No Items Brought Recently\nStart Shopping")
 
-                lbl = tk.Label(self, text="Start Shopping")
-                lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+                lbl = tk.Label(sframe, text="Start Shopping")
+                lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
                 lbl.grid(row=2, column=1,padx=30,pady=10)
 
-    def output(self, out):
+    def output(self, out,sframe):
         column = ("Transaction Unique Id","Transaction Id","Date and Time","Item name","Quantity","Amount Paid","Buyer Name","Seller Organisation")
 
-        listBox = ttk.Treeview(self,selectmode="extended",columns=column,show="headings")
-
-        verscrlbar = ttk.Scrollbar(self, orient ="vertical",command = listBox.yview)
-        verscrlbar.grid(row=2,column=2,sticky="nsw",rowspan=2)
-
-        listBox.configure(yscrollcommand = verscrlbar.set)
+        listBox = ttk.Treeview(sframe,selectmode="extended",columns=column,show="headings")
 
         for i in range(len(column)):
             listBox.heading(column[i], text=column[i],command=lambda c=column[i]: self.sortby(listBox, c, 0))
@@ -3476,11 +3503,11 @@ class Page4_BuyerDeleteAccount(tk.Frame):
         btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Delete Account")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Enter PIN")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=20,pady=10)
 
         pin=tk.Entry(self, fg="#E8E8E8", bg="#333333",show="*")
@@ -3538,11 +3565,11 @@ class Page4_BuyerCheckBalance(tk.Frame):
         btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Check Balance")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Enter PIN")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=20,pady=10)
 
         pin=tk.Entry(self, fg="#E8E8E8", bg="#333333",show="*")
@@ -3584,18 +3611,18 @@ class Page4_BuyerCashout(tk.Frame):
         btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Self Cashout Request")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Enter Balance")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=20,pady=10)
 
         amt=tk.Entry(self, fg="#E8E8E8", bg="#333333")
         amt.grid(row=2, column=2)
 
         lbl = tk.Label(self, text="Enter PIN")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=3, column=1,padx=20,pady=10)
 
         pin=tk.Entry(self, fg="#E8E8E8", bg="#333333",show="*")
@@ -3656,7 +3683,7 @@ class Page4_BuyerWalletRecharge(tk.Frame):
         btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Wallet Recharge Info")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,padx=30,pady=10)
 
         msg="""To recharge your wallet you must go to our admin locations,
@@ -3664,7 +3691,7 @@ class Page4_BuyerWalletRecharge(tk.Frame):
         PG Charges of Rs. 5 irrespective of amount is applicable.
         Never share your personal details like your PIN,Password etc with admin."""
         lbl = tk.Label(self, text=msg)
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=30,pady=10)
 
 
@@ -3686,7 +3713,7 @@ class Page4_BuyerShopping(tk.Frame):
         btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(frame.scrollable_frame, text="Kans\nStart Shopping")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,pady=10,columnspan=3)
 
         Apptools.image_Show(frame.scrollable_frame, DASHBOARDImgDir, 2, 0, 700, 110,cspan=5)
@@ -3741,13 +3768,13 @@ class Page5_BuyerItemPicker(tk.Frame):
         btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Kans\nStart Shopping")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=0,columnspan=3,pady=10)
 
         cat=self.itemcategory(itemtype)
 
         lbl = tk.Label(self, text=cat.title())
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=0,pady=10,columnspan=3)
 
 
@@ -3845,11 +3872,11 @@ class Page4_BuyerSearchItems(tk.Frame):
         btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Search Items")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=4,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Search Criteria")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=5,pady=10)
 
         Searchcr = ["Item Name","Description","Category"]
@@ -3861,7 +3888,7 @@ class Page4_BuyerSearchItems(tk.Frame):
         Menu.grid(row=2, column=2)
 
         lbl = tk.Label(self, text="Enter Value")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=3, column=1,padx=5,pady=10)
 
         val=tk.Entry(self, fg="#E8E8E8", bg="#333333")
@@ -3969,7 +3996,7 @@ class Page6_BuyerProductView(tk.Frame):
         btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Kans : Your Shopping Partner")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=4,padx=30,pady=10)
 
         itemdetails=chooseditemdetails
@@ -4007,7 +4034,7 @@ class Page6_BuyerProductView(tk.Frame):
         btn.grid(row=3, column=3,padx=10)
 
         lbl = tk.Label(self, text="Enter Quantity")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=4, column=1,padx=5,pady=10)
 
         qty=tk.Entry(self, fg="#E8E8E8", bg="#333333")
@@ -4081,26 +4108,29 @@ class Page7_BuyerPaymentProceed(tk.Frame):
         self.makeWidgets(master)
 
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Buyer's Home",command=lambda: master.switch_frame(Page3_BuyerShoppe))
+        sframe = ScrollableFrame(self,cw=750,ch=600)
+
+        
+        btn=tk.Button(sframe.scrollable_frame,text="Buyer's Home",command=lambda: master.switch_frame(Page3_BuyerShoppe))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
-        btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
+        btn=tk.Button(sframe.scrollable_frame,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=3, sticky="e")
 
-        lbl = tk.Label(self, text="Payment Confirmation")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(sframe.scrollable_frame, text="Payment Confirmation")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=0,columnspan=3,padx=30,pady=10)
 
-        lbl = tk.Label(self, text="Cart")
-        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl = tk.Label(sframe.scrollable_frame, text="Cart")
+        lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=0,columnspan=2,padx=30,pady=10,sticky="w")
 
-        sep = ttk.Separator(self,orient='horizontal')
+        sep = ttk.Separator(sframe.scrollable_frame,orient='horizontal')
         sep.grid(row=3,column=0,sticky="ew",columnspan=2)
 
-        frame = ScrollableFrame(self,cw=550,ch=300)
+        frame = ScrollableFrame(sframe.scrollable_frame,cw=550,ch=300)
 
         out=self.retrievedata()
 
@@ -4150,28 +4180,30 @@ class Page7_BuyerPaymentProceed(tk.Frame):
         userd=self.userdata()
         netb=0
         if userd is not None:
-            lbl = tk.Label(self, text="Deliever to\n"+userd[0]+"\n"+userd[1])
+            lbl = tk.Label(sframe.scrollable_frame, text="Deliever to\n"+userd[0]+"\n"+userd[1])
             lbl.config(font=("Segoe Print", 20), fg="#E8E8E8", bg="#333333")
             lbl.grid(row=3, column=2,padx=10,pady=5,rowspan=2,sticky="ns")
 
             netb=self.bargain(out,userd[2])
-            lbl1 = tk.Label(self, text="Net Bargain : ₹"+str(netb))
+            lbl1 = tk.Label(sframe.scrollable_frame, text="Net Bargain : ₹"+str(netb))
             lbl1.config(font=("Segoe Print", 20), fg="#E8E8E8", bg="#333333")
             lbl1.grid(row=7, column=0,columnspan=2,padx=10,pady=5,sticky="nsw")
 
-            lbl = tk.Label(self, text="Amount to be Paid : ₹"+str(round(totalprice-netb+5,2))+"\nInclusive of PG Charge(₹5)")
+            lbl = tk.Label(sframe.scrollable_frame, text="Amount to be Paid : ₹"+str(round(totalprice-netb+5,2))+"\nInclusive of PG Charge(₹5)")
             lbl.config(font=("Segoe Print", 20), fg="#E8E8E8", bg="#333333")
             lbl.grid(row=8, column=0,columnspan=2,padx=10,pady=5,sticky="nsw")
 
 
-        lbl = tk.Label(self, text="Total Price : ₹"+str(totalprice))
+        lbl = tk.Label(sframe.scrollable_frame, text="Total Price : ₹"+str(totalprice))
         lbl.config(font=("Segoe Print", 20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=6, column=0,columnspan=2,padx=10,pady=10,sticky="nsw")
 
         price=round(totalprice-netb,2)
-        btn=tk.Button(self,text="Proceed to Pay",command=lambda: self.payportal(master,out,price))
+        btn=tk.Button(sframe.scrollable_frame,text="Proceed to Pay",command=lambda: self.payportal(master,out,price,sframe))
         btn.config(bg="#1F8EE7",padx=7,pady=4,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=6, column=2,rowspan=3)
+
+        sframe.grid(row=0,column=0)
 
 
 
@@ -4230,16 +4262,16 @@ class Page7_BuyerPaymentProceed(tk.Frame):
                     # 14% for seller
         return round(netbargain,2) # To ensure bargain is never greater than the limit due to approximation
 
-    def payportal(self,master,out,price):
+    def payportal(self,master,out,price,sframe):
 
         if out!=[]:
             for ino,iname,iwp,irp,idesc,icat,istock,imgdir,selluser,iqty in out:
                 if istock>=iqty:
-                    self.paymentpage(master,price,out)
+                    self.paymentpage(master,price,out,sframe)
 
                 else:
                     txtmsg="Only a Few stocks are left as item is getting out of stock."
-                    txtmsg+="\nStocks available for "+iname+" is "+istock
+                    txtmsg+="\nStocks available for "+iname+" is "+str(istock)
                     txtmsg+="\nCan't Buy this item. :-(\nTry Checking with fewer stocks"
 
                     messagebox.showwarning("Item is out of Stock",txtmsg)
@@ -4247,22 +4279,22 @@ class Page7_BuyerPaymentProceed(tk.Frame):
         else:
             messagebox.showwarning("Empty Cart","Your Cart is Empty Start Shopping Now.")
 
-    def paymentpage(self,master,price,out):
+    def paymentpage(self,master,price,out,sframe):
         screen = tk.Toplevel(self, bg="#333333")
         screen.iconphoto(False, Icon)
         screen.title("Payment Portal @Kans")
         screen.resizable(0, 0)
 
         lbl = tk.Label(screen, text="Payment Portal")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=0, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(screen, text="Total Transaction Amount : ₹"+str(price)+"+₹5 (PG Charges)")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,padx=20,pady=10)
 
         lbl = tk.Label(screen, text="Enter PIN")
-        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 8), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=20,pady=10)
 
         pin=tk.Entry(screen, fg="#E8E8E8", bg="#333333",show="*")
@@ -4331,7 +4363,7 @@ class Page7_BuyerPaymentProceed(tk.Frame):
 
                             if c is not None:
                                 messagebox.showinfo("Success!","Transaction completed successfully!")
-                                lbl = tk.Label(self, text="Transaction Done\nItem Delivered")
+                                lbl = tk.Label(sframe.scrollable_frame, text="Transaction Done\nItem Delivered")
                                 lbl.config(font=("Segoe Print", 20), fg="#E8E8E8", bg="#333333")
                                 lbl.grid(row=6, column=2,rowspan=3,sticky="ns")
                     else:
@@ -4399,7 +4431,7 @@ class Page4_BuyerWishlist(tk.Frame):
         btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Wishlist")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=0,columnspan=3,padx=30,pady=10)
 
         sep = ttk.Separator(self,orient='horizontal')
