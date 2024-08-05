@@ -41,14 +41,15 @@ chooseditemdetails=[]
 """
 Image Files Directories
 """
+LOGOImgDir="logo.png"
 DEFAULTIMAGEDir="Additem.png"
 HOMEPAGEImgDir="logo.png"
 SIGNUPPAGEImgDir=["Part1.png","Part2.png"]
 DASHBOARDImgDir="Lighthouse.jpg"
 #Files in Directory CATEGORYCARDFOLDERNAME Var
 CATEGORYCARDFOLDERNAME="CardsShop"
-CATEGORYCARDImgDir=["Img1.jpg","Img2.png","Img3.jpg","Img4.jpg","Img5.png","Img6.png"]
-CATEGORYCARDImgDir+=["Img7.jpg","Img8.png","Img9.jpg"]
+CATEGORYCARDImgDir=["Img1.jpg","Img2.jpg","Img3.jpg","Img4.jpg","Img5.jpg","Img6.jpg"]
+CATEGORYCARDImgDir+=["Img7.jpg","Img8.jpg","Img9.jpg"]
 
 
 
@@ -3696,13 +3697,16 @@ class Page4_BuyerShopping(tk.Frame):
                 Photo = Photo.resize((200, 200))
                 render = ImageTk.PhotoImage(Photo)
 
-                imgbtnfs = tk.Button(frame.scrollable_frame, image=render)
-                imgbtnfs.image = render
-                imgbtnfs.grid(row = r,column=c,padx=10,pady=10)
-                imgbtnfs.config(command=lambda x=i: self.framechange(master,x))
-
             except Exception as e:
+                Photo = Image.open(DEFAULTIMAGEDir)
+                Photo = Photo.resize((200, 200))
+                render = ImageTk.PhotoImage(Photo)
                 print(e)
+            imgbtnfs = tk.Button(frame.scrollable_frame, image=render)
+            imgbtnfs.image = render
+            imgbtnfs.grid(row = r,column=c,padx=10,pady=10)
+            imgbtnfs.config(command=lambda x=i: self.framechange(master,x))
+
             if c==3:
                 r+=1
                 c=1
@@ -4528,6 +4532,11 @@ if __name__ == "__main__":
     app = App()
     app.title("Kans:Your shopping partner")
     app.resizable(0, 0)
-    Icon = PhotoImage(file="logo.png")
-    app.iconphoto(False, Icon)
+    try:
+        Icon = PhotoImage(file=LOGOImgDir)
+        app.iconphoto(False, Icon)
+    except Exception as e:
+        print(e)
+        Icon = PhotoImage(file=DEFAULTIMAGEDir)
+        app.iconphoto(False, Icon)
     app.mainloop()
