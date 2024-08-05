@@ -1,0 +1,5 @@
+python -m nuitka --follow-imports --plugin-enable=pylint-warnings --mingw64 App.py
+python -m nuitka --standalone  --include-data-dir=data=data  --include-data-dir=res=res --windows-icon-from-ico=icon.ico --plugin-enable=tk-inter --mingw64 App.py
+
+Pyinstaller call
+pyinstaller --noconsole --windowed --add-data "res;res" -i"icon.ico" App.py

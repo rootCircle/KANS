@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "kans"
+version = "0.1.0"
+description = ""
+authors = ["Lab Rat <dev.frolics@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pillow = "^10.4.0"
+Pyrebase4 = "^4.8.0"
+urllib3 = ">=1.21.1,<2"
+requests = "^2.32.3"
+firebase-admin = "^6.5.0"
+setuptools = "^72.1.0"
+python-dotenv = "^1.0.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

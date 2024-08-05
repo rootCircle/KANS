@@ -2,7 +2,7 @@
 eCommerce App for buyer,seller,admin all in one under python using firebase
 
 # Installation
-User Need a Firebase Account to host data
+User Need a Firebase Account to host data, rename `service-account-file.sample.json` to `service-account-file.json` and put actual stuff from Firebae as well rename `.sample.env` to `.env` and do the same!
 
 He/She has to modify service-accounts.json file located in res directory as well as Python Code containing details of Firebase account. Instruction through comment are given in source code itself.
 

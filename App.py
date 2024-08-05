@@ -69,6 +69,8 @@ try:
     import firebase_admin._auth_utils
     from firebase_admin import auth, db, storage
     from firebase_admin import exceptions as fireexception
+    from dotenv import load_dotenv
+
 except Exception as ex:
     try:
         os.makedirs(LOG_FILE_FOLDER)
@@ -81,6 +83,8 @@ except Exception as ex:
     import sys
 
     sys.exit()
+
+load_dotenv()  # take environment variables from .env.
 
 """
 Some Custom Variable(Not to be modified)
@@ -112,16 +116,16 @@ in firebase variable:storage-bucket can be fetched from Storage section in Fireb
 """
 
 SERVICEACCOUNTFILE = os.path.join("res", "service-account-file.json")
-dbURL = "<DB URL HERE>"
+dbURL = os.getenv("FIREBASE_DB_URL")
 
 firebaseConfig = {
-    "apiKey": "<>",
-    "authDomain": "<>",
+    "apiKey": os.getenv("FIREBASE_API_KEY"),
+    "authDomain": os.getenv("FIREBASE_AUTH_DOMAIN"),
     'databaseURL': dbURL,
-    "projectId": <>",
-    "storageBucket": "<>",
-    "messagingSenderId": "<>",
-    "appId": "<>",
+    "projectId": os.getenv("FIREBASE_PROJECT_ID"),
+    "storageBucket": os.getenv("FIREBASE_STORAGE_BUCKET"),
+    "messagingSenderId": os.getenv("FIREBASE_MESSAGING_SENDER_ID"),
+    "appId": os.getenv("FIREBASE_APP_ID"),
     "serviceAccount": SERVICEACCOUNTFILE
 }
 pfirebase = pyrebase.initialize_app(firebaseConfig)
@@ -130,7 +134,7 @@ pauth = pfirebase.auth()
 cred = firebaseadmin.credentials.Certificate(SERVICEACCOUNTFILE)
 firebase = firebaseadmin.initialize_app(cred, {
     'databaseURL': dbURL,
-    'storageBucket': '<>'
+    'storageBucket': os.getenv("FIREBASE_STORAGE_BUCKET")
 })
 
 WALLETTABLE = "Wallet"
