@@ -2084,7 +2084,7 @@ class Page4_AdminSelfCashoutRequest(tk.Frame):
                                     messagebox.showinfo("Action Initiated","Use the Key to get access to your wallet amount (in cash) to our nearest agent.")
 
                                     lbl = tk.Label(self, text="Successful\nAmount : "+str(bal)+"\nKey : "+key+"\nNote it down(Not recoverable)")
-                                    lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+                                    lbl.config(font=("Sans Serif", 15), fg="#E8E8E8", bg="#333333")
                                     lbl.grid(row=5, column=1,pady=10,columnspan=3)
                             else:
                                 messagebox.showwarning("Insufficient fund","There is insufficient money in your wallet.")
@@ -2494,7 +2494,7 @@ class Page4_SellerCashoutRequest(tk.Frame):
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=4, column=3,pady=10)
 
-        msg="""After generating of key write down key and amount safely
+        msg="""After generation of key write down key and amount safely
         and show it to our nearest admin.
         PG charges (Rs.5) is applicable."""
         lbl = tk.Label(self, text=msg)
@@ -2518,7 +2518,7 @@ class Page4_SellerCashoutRequest(tk.Frame):
                                 messagebox.showinfo("Action Initiated","Use the Key to get access to your wallet amount (in cash) to our nearest agent.")
 
                                 lbl = tk.Label(self, text="Successful\nAmount : "+amt+"\nKey : "+key+"\nNote it down(Not recoverable)")
-                                lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+                                lbl.config(font=("Sans Serif", 15), fg="#E8E8E8", bg="#333333")
                                 lbl.grid(row=6, column=1,columnspan=3,pady=10)
                         else:
                             messagebox.showwarning("Insufficient fund","There is insufficient money in your wallet or amount withdrwn less than Rs. 5.")
@@ -3606,7 +3606,7 @@ class Page4_BuyerCashout(tk.Frame):
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=4, column=3,pady=10)
 
-        msg="""After generating of key write down key and amount safely
+        msg="""After genaration of key write down key and amount safely
         and show it to our nearest admin.
         PG charges (Rs.5) is applicable."""
         lbl = tk.Label(self, text=msg)
@@ -3630,7 +3630,7 @@ class Page4_BuyerCashout(tk.Frame):
                                 messagebox.showinfo("Action Initiated","Use the Key to get access to your wallet amount (in cash) to our nearest agent.")
 
                                 lbl = tk.Label(self, text="Successful\nAmount : "+amt+"\nKey : "+key+"\nNote it down(Not recoverable)")
-                                lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+                                lbl.config(font=("Sans Serif", 15), fg="#E8E8E8", bg="#333333")
                                 lbl.grid(row=6, column=1,columnspan=3,pady=10)
                         else:
                             messagebox.showwarning("Insufficient fund","There is insufficient money in your wallet or amount withdrawn less than Rs. 5.")
