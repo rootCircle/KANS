@@ -12,7 +12,7 @@ try:
     import tkinter as tk
 except ImportError:
     import Tkinter as tk
-from tkinter import messagebox,Radiobutton,PhotoImage,StringVar,filedialog,ttk
+from tkinter import messagebox,Radiobutton,PhotoImage,StringVar,filedialog,ttk,simpledialog
 import tkinter.font as tkFont
 import mysql.connector as mysqlcon
 from PIL import Image, ImageTk
@@ -3647,27 +3647,98 @@ class Page5_BuyerItemPicker(tk.Frame):
 
     def makeWidgets(self,master):
 
-        frame = ScrollableFrame(self)
 
-        btn=tk.Button(frame.scrollable_frame,text="Go Back",command=lambda: master.switch_frame(Page4_BuyerShopping))
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page4_BuyerShopping))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
-        btn=tk.Button(frame.scrollable_frame,text="Logout",command=lambda: Apptools.logout(self, master))
+        btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="e")
+        btn.grid(row=0, column=2, sticky="e")
 
-        lbl = tk.Label(frame.scrollable_frame, text="Kans\nStart Shopping")
+        lbl = tk.Label(self, text="Kans\nStart Shopping")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=1,pady=10,columnspan=3)
+        lbl.grid(row=1, column=0,columnspan=3,pady=10)
 
         cat=self.itemcategory(itemtype)
 
-        lbl = tk.Label(frame.scrollable_frame, text="You Searched For Category:"+cat)
+        lbl = tk.Label(self, text=cat.title())
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=2, column=1,pady=10,columnspan=3)
+        lbl.grid(row=2, column=0,pady=10,columnspan=3)
 
-        frame.grid(row=0,column=0)
+
+        self.search(master,cat)
+
+    def search(self,master, category):
+        Apptools.defaultqueryrun(self,"items")
+
+        if Apptools.is_not_null(self, category):
+            query ="Select * from items where icat like '%"+ category+ "%';"
+            record = Apptools.sql_run(self, query)
+
+            if record is not None:
+                out = record[0]
+                self.output(master,out)
+        else:
+            messagebox.showwarning("Error", "Incomplete input!")
+
+
+    def output(self,master, out):
+        sep = ttk.Separator(self,orient='horizontal')
+        sep.grid(row=3,column=0,columnspan=3,sticky="ew")
+        frame = ScrollableFrame(self,cw=500,ch=300)
+
+        if out!=[]:
+            r=0
+            for ino,iname,iwp,irp,idesc,icat,istock,imgdir,selluser in out:
+
+                orgname=self.sellerorgname(selluser)
+
+                txt="Item name : "+iname.title()+"\n"+"Seller : "+orgname
+                txt+="\nDescription : "+idesc.title()+"\nCategory : "+icat.title()
+                txt+="\nPrice : ₹"+str(irp)
+
+                try:
+                    Photo = Image.open(imgdir)
+                    Photo = Photo.resize((200, 200))
+                    render = ImageTk.PhotoImage(Photo)
+
+                except Exception as e:
+                    print(e)
+
+                    Photo = Image.open("Additem.png")
+                    Photo = Photo.resize((250, 150))
+                    render = ImageTk.PhotoImage(Photo)
+
+                imgbtnfs = tk.Button(frame.scrollable_frame,text=txt ,image=render,compound =tk.LEFT)
+                imgbtnfs.image = render
+                imgbtnfs.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0)
+                imgbtnfs.config(activebackground="#3297E9",font=("Segoe Print", 15))
+                imgbtnfs.grid(row =r,column=0,padx=10,pady=10,sticky="ew")
+
+                idata=[ino,iname,iwp,irp,idesc,icat,istock,imgdir,selluser,orgname]
+                imgbtnfs.config(command = lambda x=idata: self.framechange(master,x))
+                r+=1
+
+        else:
+            lbl = tk.Label(frame.scrollable_frame, text="No Items Found :-(")
+            lbl.config(font=("Segoe Print", 30), fg="#E8E8E8", bg="#333333")
+            lbl.grid(row=0, column=2,columnspan=4,padx=100,pady=100)
+
+        frame.grid(row=6,column=0,columnspan=3)
+
+    def sellerorgname(self,suser):
+        rec=Apptools.defaultqueryrun(self,"logindataseller")
+        if rec:
+            query="select OrgName from logindataseller where username='"+suser+"';"
+            out=Apptools.sql_run(self,query)
+            if out:
+                if out[0]:
+                    return out[0][0][0]
+
+    def framechange(self,master,x):
+        globals()['chooseditemdetails']=x
+        master.switch_frame(Page6_BuyerProductView)
 
     def itemcategory(self,i):
         Category = ["Stationary","Electronics","Clothing","Beauty",
@@ -3803,7 +3874,7 @@ class Page6_BuyerProductView(tk.Frame):
         self.makeWidgets(master)
 
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_BuyerShoppe))
+        btn=tk.Button(self,text="Buyer's Home",command=lambda: master.switch_frame(Page3_BuyerShoppe))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
@@ -3870,11 +3941,13 @@ class Page6_BuyerProductView(tk.Frame):
         if cond1 and cond2 and cond3:
             cartuc=Apptools.generateuniquecode(self,"cart","cartuc")
             Apptools.defaultqueryrun(self,"cart")
-            query="Select cartuc,iquantity from cart where itemno="+str(ino)+" and BuyerUsername = '"+G_USERNAME.get()+"';"
-            out=Apptools.sql_run(self,query)
+            query11="Select cartuc,iquantity from cart where itemno="+str(ino)+" and BuyerUsername = '"+G_USERNAME.get()+"';"
+            query12="Select istock from items where itemno="+str(ino)+";"
+            out=Apptools.sql_run(self,query11,query12)
 
-            if out is not None and out[0]!=[]:
-                if out[0][0][1]+int(iqty)<=istock:
+            if out is not None and out[0]!=[] and out[1]!=[]:
+                istockn=out[1][0][0]
+                if out[0][0][1]+int(iqty)<=istockn:
                     query2="Update cart set iquantity=iquantity+"+str(iqty)+" where cartuc='"+out[0][0][0]+"';"
                     rec0=Apptools.sql_run(self,query2)
                     if rec0 is not None:
@@ -3882,7 +3955,7 @@ class Page6_BuyerProductView(tk.Frame):
                             messagebox.showinfo("Success!","Added to Cart Successfully!")
                         return True
                 else:
-                    istock-=out[0][0][1]
+                    istockn-=out[0][0][1]
                     messagebox.showwarning("Invalid Input!","Enter Valid Input for Quantity 0<>"+str(istock))
             elif out[0]==[]:
                 rec = Apptools.insertSQL(self,"cart",cartuc,ino,iqty,G_USERNAME.get())
@@ -3898,9 +3971,14 @@ class Page6_BuyerProductView(tk.Frame):
     def addtowishlist(self,ino):
 
         wishlistuc=Apptools.generateuniquecode(self,"wishlist","wishlistuc")
-        rec = Apptools.insertSQL(self,"wishlist",wishlistuc,ino,G_USERNAME.get())
-        if rec is not None:
-            messagebox.showinfo("Success!","Added to Wish List Successfully!")
+        query="Select wishlistuc from wishlist where itemno="+str(ino)+" and BuyerUsername='"+G_USERNAME.get()+"';"
+        out=Apptools.sql_run(self,query)
+        if out==[[]]:
+            rec = Apptools.insertSQL(self,"wishlist",wishlistuc,ino,G_USERNAME.get())
+            if rec is not None:
+                messagebox.showinfo("Success!","Added to Wish List Successfully!")
+        elif out is not None:
+            messagebox.showinfo("Item Already Exist!","Item Already Exist in your wishlist!")
 
     def paypage(self,master,ino,qty,istock):
         cond=self.addtocart(ino,qty,istock,showMsg=False)
@@ -3913,7 +3991,7 @@ class Page7_BuyerPaymentProceed(tk.Frame):
         self.makeWidgets(master)
 
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_BuyerShoppe))
+        btn=tk.Button(self,text="Buyer's Home",command=lambda: master.switch_frame(Page3_BuyerShoppe))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
@@ -4195,24 +4273,27 @@ class Page4_BuyerWishlist(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="e")
+        btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Wishlist")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=0,columnspan=3,padx=30,pady=10)
 
-        frame = ScrollableFrame(self,cw=550,ch=300)
+        sep = ttk.Separator(self,orient='horizontal')
+        sep.grid(row=2,column=0,columnspan=3,sticky="ew")
 
-        out=[]
+        frame = ScrollableFrame(self,cw=650,ch=300)
+
+        out=self.retrievedata()
         if out!=[]:
             r=0
-            for ino,iname,iwp,irp,idesc,icat,istock,imgdir,selluser,iqty in out:
+            for ino,iname,iwp,irp,idesc,icat,istock,imgdir,selluser in out:
 
                 orgname=self.sellerorgname(selluser)
 
                 txt="Item name : "+iname.title()+"\n"+"Seller : "+orgname
                 txt+="\nDescription : "+idesc.title()+"\nCategory : "+icat.title()
-                txt+="\nPrice : ₹"+str(irp)+"\nQuantity : "+str(iqty)
+                txt+="\nPrice : ₹"+str(irp)
 
                 try:
                     Photo = Image.open(imgdir)
@@ -4232,13 +4313,13 @@ class Page4_BuyerWishlist(tk.Frame):
                 lbl.config(activebackground="#3297E9",font=("Segoe Print", 15))
                 lbl.grid(row =r,column=0,padx=10,pady=10,sticky="ew")
 
-                btn=tk.Button(frame.scrollable_frame,text="Remove Item",command=lambda x=ino: self.deleteitemcart(master,x))
+                btn=tk.Button(frame.scrollable_frame,text="Remove Item",command=lambda x=ino: self.deletewishlist(master,x))
                 btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-                btn.grid(row=r, column=1)
+                btn.grid(row=r, column=1,padx=3)
 
-                btn=tk.Button(frame.scrollable_frame,text="Add to Cart",command=lambda x=ino: self.deleteitemcart(master,x))
+                btn=tk.Button(frame.scrollable_frame,text="Add to Cart",command=lambda x=(ino,istock): self.addtocart(x[0],x[1]))
                 btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-                btn.grid(row=r, column=1)
+                btn.grid(row=r, column=2)
                 r+=1
 
         else:
@@ -4246,7 +4327,81 @@ class Page4_BuyerWishlist(tk.Frame):
             lbl.config(font=("Segoe Print", 30), fg="#E8E8E8", bg="#333333")
             lbl.grid(row=0, column=2,columnspan=4,padx=100,pady=100)
 
-        frame.grid(row=4,column=0,columnspan=2,sticky="nw")
+        frame.grid(row=3,column=0,columnspan=3,sticky="nw")
+
+    def retrievedata(self):
+        Apptools.defaultqueryrun(self,"wishlist")
+        Apptools.defaultqueryrun(self,"items")
+        query="Select itemno from wishlist where buyerusername ='"+G_USERNAME.get()+"';"
+        out=Apptools.sql_run(self,query)
+
+        data=[]
+        if out is not None:
+            if out[0]!=[]:
+                out=out[0]
+                for ino in out:
+                    query2="Select * from items where itemno="+str(ino[0])+";"
+                    out2=Apptools.sql_run(self,query2)
+
+                    if out2 is not None and out2[0]!=[]:
+                        out2=out2[0][0]
+                        data.append(out2)
+        return data
+
+    def sellerorgname(self,suser):
+        rec=Apptools.defaultqueryrun(self,"logindataseller")
+        if rec:
+            query="select OrgName from logindataseller where username='"+suser+"';"
+            out=Apptools.sql_run(self,query)
+            if out:
+                if out[0]:
+                    return out[0][0][0]
+
+    def deletewishlist(self,master,ino):
+        query="delete from wishlist where itemno="+str(ino)+" and BuyerUsername='"+G_USERNAME.get()+"';"
+        rec=Apptools.sql_run(self,query)
+        if rec is not None:
+            messagebox.showinfo("Success","Item Deleted Successfully")
+            master.switch_frame(Page4_BuyerWishlist)
+
+
+    def addtocart(self,ino,istock):
+        iqty=simpledialog.askinteger("Input","Enter Quantity?",parent=self,minvalue=1,maxvalue=istock)
+
+        if iqty is not None:
+            iqty=str(iqty)
+            cond1=Apptools.check_digit(self, iqty)
+            cond2=Apptools.in_limit(self, 1, istock, iqty)
+            cond3=iqty.find(".")==-1 and iqty.find("-")==-1
+
+            if cond1 and cond2 and cond3:
+                cartuc=Apptools.generateuniquecode(self,"cart","cartuc")
+                Apptools.defaultqueryrun(self,"cart")
+                query11="Select cartuc,iquantity from cart where itemno="+str(ino)+" and BuyerUsername = '"+G_USERNAME.get()+"';"
+                query12="Select istock from items where itemno="+str(ino)+";"
+                out=Apptools.sql_run(self,query11,query12)
+
+                if out is not None and out[0]!=[] and out[1]!=[]:
+                    istockn=out[1][0][0]
+                    if out[0][0][1]+int(iqty)<=istockn:
+                        query2="Update cart set iquantity=iquantity+"+str(iqty)+" where cartuc='"+out[0][0][0]+"';"
+                        rec0=Apptools.sql_run(self,query2)
+                        if rec0 is not None:
+
+                            messagebox.showinfo("Success!","Added to Cart Successfully!")
+                            return True
+                    else:
+                        istockn-=out[0][0][1]
+                        messagebox.showwarning("Invalid Input!","Enter Valid Input for Quantity 0<>"+str(istock))
+                elif out[0]==[]:
+                    rec = Apptools.insertSQL(self,"cart",cartuc,ino,iqty,G_USERNAME.get())
+                    if rec is not None:
+                        messagebox.showinfo("Success!","Added to Cart Successfully!")
+                        return True
+            elif istock==0:
+                messagebox.showwarning("Out of Stock","Item is out of stock check your cart if you have pre-booked that.")
+            else:
+                messagebox.showwarning("Invalid Input!","Enter Valid Input for Quantity 0<>"+str(istock))
 
 
 # Main Program
