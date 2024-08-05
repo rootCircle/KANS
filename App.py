@@ -82,7 +82,7 @@ class Apptools:
             if sql_connection:
                 sql_connection.close()
 
-    def image_Show(self, Dir, xrow, ycolumn, width, height,mode="grid"):
+    def image_Show(self, Dir, xrow, ycolumn, width, height,mode="grid",rspan=1,cspan=1):
 
         Photo = Image.open(Dir)
         Photo = Photo.resize((width, height))
@@ -90,7 +90,7 @@ class Apptools:
         img = tk.Label(self, image=render)
         img.image = render
         if mode=='grid':
-            img.grid(row=xrow, column=ycolumn, pady=3)
+            img.grid(row=xrow, column=ycolumn,rowspan=rspan,columnspan=cspan)
         else:
             img.place(x=xrow,y=ycolumn,relx=0,rely=0)
 
@@ -158,8 +158,22 @@ class Apptools:
             print(e)
             Apptools.imgsavebtn(self,"Additem.png",width,height,irow,icolumn)
 
-    def defaultquerylogindata(self,usertype):
-        if usertype=="Admin":
+    def imageButton(self,diry,width,height,irow,icolumn):
+        try:
+            Photo = Image.open(diry)
+            Photo = Photo.resize((width, height))
+            render = ImageTk.PhotoImage(Photo)
+            global imgbtn
+
+            imgbtn = tk.Button(self, image=render)
+            imgbtn.image = render
+            imgbtn.grid(row = irow,column=icolumn,padx=10,pady=10)
+        except Exception as e:
+            print(e)
+
+    def defaultqueryrun(self,table):
+        table=table.lower()
+        if table=="logindataadmin":
             def_query = """Create table IF NOT exists logindataadmin(
             id int NOT NULL primary KEY,
             Name varchar(50) NOT NULL,
@@ -170,7 +184,7 @@ class Apptools:
             Password varchar(32) NOT NULL,
             PIN INT NOT NULL,
             WalNo varchar(8) NOT NULL unique);"""
-        elif usertype=="Buyer":
+        elif table=="logindatabuyer":
             def_query = """Create table IF NOT exists logindatabuyer(
             id int NOT NULL primary KEY,
             Name varchar(50) NOT NULL,
@@ -183,56 +197,72 @@ class Apptools:
             WalNo varchar(8) NOT NULL unique,
             PIN INT NOT NULL,
             IsPremium char(1) NOT NULL DEFAULT 'N');"""
-        elif usertype=="Seller":
+
+        elif table=="logindataseller":
             def_query="""Create table IF NOT exists logindataseller(
             id int NOT NULL primary KEY,
             Name varchar(50) NOT NULL,
             Age int NOT NULL,
             Gender char(1) NOT NULL,
             MobNo bigint NOT NULL UNIQUE,
-            OrgName varchar(48) not null,
-            AddOrg varchar(48) not null,
+            OrgName varchar(64) not null,
+            AddOrg varchar(250) not null,
             Username varchar(32) NOT NULL UNIQUE,
             Password varchar(32) NOT NULL,
             WalNo varchar(8) NOT NULL unique,
             PIN INT NOT NULL);"""
+
+        elif table=="walletbank":
+            def_query = """Create table IF NOT exists walletbank(
+            WalNo varchar(8) NOT NULL primary KEY,
+            UserType char(1) NOT NULL,
+            Amt int NOT NULL,
+            PIN INT NOT NULL);"""
+
+        elif table=="tempbank":
+            def_query = """Create table IF NOT exists tempbank(
+            SecCode varchar(16) NOT NULL primary KEY,
+            encode bigint);"""
+
+        elif table=="cashinhandadmin":
+            def_query="""Create table IF NOT exists cashinhandadmin(
+            username varchar(32) PRIMARY KEY,
+            bal int);"""
+
+        elif table=="items":
+            def_query="""Create table IF NOT EXISTS items(
+            itemno int PRIMARY KEY,
+            iname varchar(32) NOT NULL,
+            iwhp int NOT NULL,
+            irp int NOT NULL,
+            idesc varchar(250) NOT NULL,
+            icat varchar(32) NOT NULL,
+            istock int NOT NULL,
+            imgdir varchar(255) NOT NULL,
+            SellerUsername varchar(32) NOT NULL);
+            """
         else:
-            messagebox.showwarning("Invalid User Type!","Enter a valid User type")
-            return
-        return def_query
+            def_query=None
+        rec=None
+        if def_query is not None:
+            rec=Apptools.sql_run(self,def_query)
+        if rec is not None:
+            return True
+        return False
 
-    def defaultquerywalletbank(self):
-        def_query = """Create table IF NOT exists walletbank(
-        WalNo varchar(8) NOT NULL primary KEY,
-        UserType char(1) NOT NULL,
-        Amt int NOT NULL,
-        PIN INT NOT NULL);"""
-        return def_query
+    def insertSQL(self,table,*values):
+        rec=Apptools.defaultqueryrun(self,table)
+        if rec:
+            query="Insert into {0} values(".format(table)
+            for val in values:
+                if isinstance(val,int) or isinstance(val,float):
+                    query+=str(val)+","
+                else:
+                    query+="'"+val+"',"
+            query=query[:len(query)-1]+");"
 
-    def defaultquerytempbank(self):
-        def_query = """Create table IF NOT exists tempbank(
-        SecCode varchar(16) NOT NULL primary KEY,
-        encode bigint);"""
-        return def_query
-
-    def defaultquerycashinhandadmin(self):
-        def_query="""Create table IF NOT exists cashinhandadmin(
-        username varchar(32) PRIMARY KEY,
-        bal int);"""
-        return def_query
-
-    def defaultqueryitems(self):
-        def_query="""Create table IF NOT EXISTS items(
-        itemno int PRIMARY KEY,
-        iname varchar(32) NOT NULL,
-        iwhp int NOT NULL,
-        irp int NOT NULL,
-        idesc varchar(250) NOT NULL,
-        istock int NOT NULL,
-        imgdir varchar(255) NOT NULL,
-        SellerUsername varchar(32) NOT NULL);
-        """
-        return def_query
+            rec2=Apptools.sql_run(self,query)
+            return rec2
 
     def is_not_null(self, *text):
         if len(text)!=0:
@@ -297,8 +327,7 @@ class Apptools:
         return txt
 
     def generatewalletno(self):
-        def_query=Apptools.defaultquerywalletbank(self)
-        rec=Apptools.sql_run(self, def_query)
+        rec=Apptools.defaultqueryrun(self,"walletbank")
         if rec:
             query = "select WalNo from walletbank;"
             out=Apptools.sql_run(self, query)
@@ -316,7 +345,7 @@ class Apptools:
                 return txt
 
     def checkBalance(self,walno,pin):
-        rec=Apptools.sql_run(self,Apptools.defaultquerywalletbank(self))
+        rec=Apptools.defaultqueryrun(self,"walletbank")
         if rec:
             query = "Select Amt from walletbank where walno='"+walno+"' and pin="+str(pin)+";"
             bal=Apptools.sql_run(self,query)[0][0][0]
@@ -389,22 +418,20 @@ class Apptools:
         """Generate Key to initiate a cashout"""
         bal=int(bal)
         if bal<=10000000:
-            def_query=Apptools.defaultquerytempbank(self)
-            rec=Apptools.sql_run(self,def_query)
             key,seq=Apptools.keyencoder(self, walno, bal)
+            rec=Apptools.insertSQL(self,"tempbank",key,int(seq))
             if rec:
-                query="Insert into tempbank values('"+key+"',"+str(seq)+");"
                 query_2="Update walletbank set amt=amt-"+str(bal)+" where walno = '"+walno+"';"
-                rec2=Apptools.sql_run(self,query_2,query)
+                rec2=Apptools.sql_run(self,query_2)
                 if rec2:
                     return key
         else:
             messagebox.showwarning("Amount exceed limit","As per a guideline we only accept cashout request of only amount upto 1 Crore Rupees")
 
     def clearImgCache(self):
-        def_query=Apptools.defaultqueryitems(self)
+        Apptools.defaultqueryrun(self,"items")
         query="Select imgdir from items;"
-        out=Apptools.sql_run(self,def_query,query)[1]
+        out=Apptools.sql_run(self,query)[0]
         for i in range(len(out)):
             out[i]=out[i][0]
 
@@ -449,8 +476,7 @@ class Homepage(tk.Frame):
         G_USERNAME = StringVar()
 
     def makeWidgets(self, master):
-        Apptools.image_Show(self, "blank.png", 0, 0, 300, 1)
-        Apptools.image_Show(self, "logo.png", 0, 0, 300, 450,mode="place")
+        Apptools.image_Show(self, "logo.png", 0, 0, 300, 450,rspan=10)
 
         lbl=tk.Label(self,text="Welcome to\nKans")
         lbl.config(font=("Chiller", 30),fg="#E8E8E8",bg="#333333")
@@ -500,9 +526,8 @@ class Homepage(tk.Frame):
 
     def login_check(self, master, user, pswd, usertype):
         if Apptools.is_not_null(self,user,pswd):
-            def_query=Apptools.defaultquerylogindata(self, usertype)
-            if def_query:
-                out = Apptools.sql_run(self, def_query)
+            if usertype in ("Admin", "Buyer","Seller"):
+                out = Apptools.defaultqueryrun(self, "logindata"+usertype)
                 if out:
                     sql_query = "Select Name, Username, Password, Pin from logindata"+usertype+";"
                     record = Apptools.sql_run(self, sql_query)[0]
@@ -519,6 +544,8 @@ class Homepage(tk.Frame):
                                 master.switch_frame(Page3_DashboardBuyer)
                             return
                     messagebox.showerror("Invalid credentials", "Invalid username/usertype or password!")
+            else:
+                messagebox.showwarning("Invalid User Type!","Enter a valid User type")
         else:
             messagebox.showwarning("Empty fields!", "Fill all the fields correctly to proceed.")
 
@@ -576,11 +603,9 @@ class Page2_SignupAdmin(tk.Frame):
         self.makeWidgets(master)
 
     def makeWidgets(self, master):
-        Apptools.image_Show(self, "blank.png", 0, 0, 100, 1)
-        Apptools.image_Show(self, "Part1.png", 0, 0, 100, 520,mode="place")
+        Apptools.image_Show(self, "Part1.png", 0, 0, 100, 650,rspan=15)
 
-        Apptools.image_Show(self, "blank.png", 0, 4, 100, 1)
-        Apptools.image_Show(self, "Part2.png", 482, 0, 100, 520,mode="place")
+        Apptools.image_Show(self, "Part2.png", 0, 4, 100, 650,rspan=15)
 
         lbl = tk.Label(self, text="Kans")
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
@@ -667,48 +692,39 @@ class Page2_SignupAdmin(tk.Frame):
 
     def RegisterAdmin(self,master,name,age,gender,mobno,user,pswd,repass,pin):
         if pswd == repass:
-            def_query=Apptools.defaultquerylogindata(self, "Admin")
-            if def_query:
-                query_2 = "select id from logindataadmin where username = '" + user + "';"
-                query_3 = "select id from logindataadmin where mobno = '" + mobno + "';"
-                rec = Apptools.sql_run(self, def_query)
-                if rec:
-                    out = Apptools.sql_run(self, query_2,query_3)
-                    cond1=Apptools.in_limit(self,10**9,10**10,mobno)
-                    cond2=Apptools.in_limit(self, 0, 150, age)
-                    cond3=Apptools.check_digit(self, age, pin,mobno)
-                    cond4=mobno.find(".")==-1 and mobno.find("-")==-1
-                    cond5=Apptools.is_not_null(self, name, age, gender,mobno, user, pswd, repass, pin)
-                    cond6=len(pin)>=6
-                    if cond1 and cond2 and cond3 and cond4 and cond5:
-                        if out == [[],[]]:
-                            if not(cond6):
-                                messagebox.showwarning("Weak PIN", "PIN must be of atleast 6 digits.")
-                                return
-                            walno=Apptools.generatewalletno(self)
-                            uid=str(Apptools.generate_id(self, "logindataadmin"))
-                            VALUE = "("+uid+ ", '"+ name+ "', "+ age+ ", '"+ gender+"',"
-                            VALUE+=mobno+",'"+ user+ "', '"+ pswd + "', "+ pin+ ",'"+walno+"');"
+            rec=Apptools.defaultqueryrun(self, "logindataadmin")
+            query_2 = "select id from logindataadmin where username = '" + user + "';"
+            query_3 = "select id from logindataadmin where mobno = '" + mobno + "';"
+            if rec:
+                out = Apptools.sql_run(self, query_2,query_3)
+                cond1=Apptools.in_limit(self,10**9,10**10,mobno)
+                cond2=Apptools.in_limit(self, 0, 150, age)
+                cond3=Apptools.check_digit(self, age, pin,mobno)
+                cond4=mobno.find(".")==-1 and mobno.find("-")==-1
+                cond5=Apptools.is_not_null(self, name, age, gender,mobno, user, pswd, repass, pin)
+                cond6=len(pin)>=6
+                if cond1 and cond2 and cond3 and cond4 and cond5:
+                    if out == [[],[]]:
+                        if not(cond6):
+                            messagebox.showwarning("Weak PIN", "PIN must be of atleast 6 digits.")
+                            return
+                        walno=Apptools.generatewalletno(self)
+                        uid=str(Apptools.generate_id(self, "logindataadmin"))
 
-                            sql_query ="Insert into logindataadmin values"
-                            sql_query+=VALUE
-                            rec=Apptools.sql_run(self, sql_query)
-                            if rec is not None:
-                                Apptools.sql_run(self,Apptools.defaultquerywalletbank(self))
-                                query_2="Insert into walletbank Values('"+walno+"','A',0,"+pin+");"
-                                query_3=Apptools.defaultquerycashinhandadmin(self)
-                                query_4="Insert into cashinhandadmin values('"+user+"',0);"
-                                rec2=Apptools.sql_run(self, query_2 ,query_3 ,query_4)
-                                if rec2 is not None:
-                                    messagebox.showinfo("Registration done", "Registered user successfully")
-                                    master.switch_frame(Homepage)
-                        else:
-                            if out[0]!=[]:
-                                messagebox.showinfo("Sorry! Username already taken", "Try a different username")
-                            if out[1]!=[]:
-                                messagebox.showinfo("Sorry! Mobile number is already taken", "Try a different mobile number")
+                        rec2=Apptools.insertSQL(self,"logindataadmin",int(uid),name,float(age),gender,int(mobno),user,pswd,int(pin),walno)
+                        if rec2 is not None:
+                            rec4=Apptools.insertSQL(self,"walletbank",walno,'A',0,int(pin))
+                            rec4=Apptools.insertSQL(self,"cashinhandadmin",user,0) and rec4
+                            if rec4 is not None:
+                                messagebox.showinfo("Registration done", "Registered user successfully")
+                                master.switch_frame(Homepage)
                     else:
-                        messagebox.showinfo("Invalid entry", "Fill all the entry correctly to proceed")
+                        if out[0]!=[]:
+                            messagebox.showinfo("Sorry! Username already taken", "Try a different username")
+                        if out[1]!=[]:
+                            messagebox.showinfo("Sorry! Mobile number is already taken", "Try a different mobile number")
+                else:
+                    messagebox.showinfo("Invalid entry", "Fill all the entry correctly to proceed")
         else:
             messagebox.showwarning("Password Mismatch", "Re-enter Password")
 
@@ -718,11 +734,9 @@ class Page2_SignupBuyer(tk.Frame):
         self.makeWidgets(master)
 
     def makeWidgets(self, master):
-        Apptools.image_Show(self, "blank.png", 0, 0, 100, 1)
-        Apptools.image_Show(self, "Part1.png", 0, 0, 100, 600,mode="place")
+        Apptools.image_Show(self, "Part1.png", 0, 0, 100, 650,rspan=16)
 
-        Apptools.image_Show(self, "blank.png", 0, 4, 100, 1)
-        Apptools.image_Show(self, "Part2.png", 496, 0, 100, 600,mode="place")
+        Apptools.image_Show(self, "Part2.png", 0, 4, 100, 650,rspan=16)
 
         lbl = tk.Label(self, text="Kans")
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
@@ -817,50 +831,40 @@ class Page2_SignupBuyer(tk.Frame):
 
     def RegisterBuyer(self,master,name,age,gender,mobno,user,pswd,repass,pin,DelAdd):
         if pswd == repass:
-            def_query=Apptools.defaultquerylogindata(self, "Buyer")
-            if def_query:
-                query_2 = "select id from logindatabuyer where username = '" + user + "';"
-                query_3 = "select id from logindatabuyer where mobno = '" + mobno + "';"
+            rec=Apptools.defaultqueryrun(self, "logindatabuyer")
+            query_2 = "select id from logindatabuyer where username = '" + user + "';"
+            query_3 = "select id from logindatabuyer where mobno = '" + mobno + "';"
 
-                rec = Apptools.sql_run(self, def_query)
+            if rec:
+                out = Apptools.sql_run(self, query_2,query_3)
+                cond1=Apptools.in_limit(self,10**9,10**10,mobno)
+                cond2=Apptools.in_limit(self, 0, 150, age)
+                cond3=Apptools.check_digit(self, age, pin,mobno)
+                cond4=mobno.find(".")==-1 and mobno.find("-")==-1
+                cond5=Apptools.is_not_null(self, name, age, gender,mobno, user, pswd, repass, pin,mobno,DelAdd)
+                cond6=len(pin)>=6
 
-                if rec:
-                    out = Apptools.sql_run(self, query_2,query_3)
-                    cond1=Apptools.in_limit(self,10**9,10**10,mobno)
-                    cond2=Apptools.in_limit(self, 0, 150, age)
-                    cond3=Apptools.check_digit(self, age, pin,mobno)
-                    cond4=mobno.find(".")==-1 and mobno.find("-")==-1
-                    cond5=Apptools.is_not_null(self, name, age, gender,mobno, user, pswd, repass, pin,mobno,DelAdd)
-                    cond6=len(pin)>=6
-
-                    if cond1 and cond2 and cond3 and cond4 and cond5:
-                        if out == [[],[]]:
-                            if not(cond6):
-                                messagebox.showwarning("Weak PIN", "PIN must be of atleast 6 digits.")
-                                return
-                            uid=str(Apptools.generate_id(self, "logindatabuyer"))
-                            walno=Apptools.generatewalletno(self)
-                            if walno:
-                                VALUE = "("+uid+ ", '"+ name+ "', "+ age+ ", '"+ gender+"',"
-                                VALUE+= mobno+",'"+DelAdd+"','"+ user+ "', '"+ pswd + "', '"+walno+"',"+ pin+ ",'N');"
-
-                                sql_query ="Insert into logindatabuyer values"
-                                sql_query+=VALUE
-                                rec=Apptools.sql_run(self, sql_query)
-                                if rec is not None:
-                                    Apptools.sql_run(self,Apptools.defaultquerywalletbank(self))
-                                    query_2="Insert into walletbank Values('"+walno+"','B',0,"+pin+");"
-                                    rec2=Apptools.sql_run(self, query_2)
-                                    if rec2 is not None:
-                                        messagebox.showinfo("Registration done", "Registered user successfully")
-                                        master.switch_frame(Homepage)
-                        else:
-                            if out[0]!=[]:
-                                messagebox.showinfo("Sorry! Username already taken", "Try a different username")
-                            if out[1]!=[]:
-                                messagebox.showinfo("Sorry! Mobile number is already taken", "Try a different mobile number")
+                if cond1 and cond2 and cond3 and cond4 and cond5:
+                    if out == [[],[]]:
+                        if not(cond6):
+                            messagebox.showwarning("Weak PIN", "PIN must be of atleast 6 digits.")
+                            return
+                        uid=str(Apptools.generate_id(self, "logindatabuyer"))
+                        walno=Apptools.generatewalletno(self)
+                        if walno:
+                            rec = Apptools.insertSQL(self,"logindatabuyer",int(uid),name,float(age),gender,int(mobno),DelAdd,user,pswd,walno,int(pin),'N')
+                            if rec is not None:
+                                rec2=Apptools.insertSQL(self,"walletbank",walno,'B',0,int(pin))
+                                if rec2 is not None:
+                                    messagebox.showinfo("Registration done", "Registered user successfully")
+                                    master.switch_frame(Homepage)
                     else:
-                        messagebox.showinfo("Invalid entry", "Fill all the entry correctly to proceed")
+                        if out[0]!=[]:
+                            messagebox.showinfo("Sorry! Username already taken", "Try a different username")
+                        if out[1]!=[]:
+                            messagebox.showinfo("Sorry! Mobile number is already taken", "Try a different mobile number")
+                else:
+                    messagebox.showinfo("Invalid entry", "Fill all the entry correctly to proceed")
         else:
             messagebox.showwarning("Password Mismatch", "Re-enter Password")
 
@@ -872,11 +876,9 @@ class Page2_SignupSeller(tk.Frame):
         self.makeWidgets(master)
 
     def makeWidgets(self, master):
-        Apptools.image_Show(self, "blank.png", 0, 0, 100, 1)
-        Apptools.image_Show(self, "Part1.png", 0, 0, 100, 650,mode="place")
+        Apptools.image_Show(self, "Part1.png", 0, 0, 100, 650,rspan=17)
 
-        Apptools.image_Show(self, "blank.png", 0, 4, 100, 1)
-        Apptools.image_Show(self, "Part2.png", 528, 0, 100, 650,mode="place")
+        Apptools.image_Show(self, "Part2.png", 0, 4, 100, 650,rspan=17)
 
         lbl = tk.Label(self, text="Kans")
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
@@ -978,50 +980,40 @@ class Page2_SignupSeller(tk.Frame):
 
     def RegisterSeller(self,master,name,age,gender,mobno,user,pswd,repass,pin,OrgName,OrgAdd):
         if pswd == repass:
-            def_query=Apptools.defaultquerylogindata(self, "Seller")
-            if def_query:
-                query_2 = "select id from logindataseller where username = '" + user + "';"
-                query_3 = "select id from logindataseller where mobno = '" + mobno + "';"
+            rec=Apptools.defaultqueryrun(self, "logindataseller")
+            query_2 = "select id from logindataseller where username = '" + user + "';"
+            query_3 = "select id from logindataseller where mobno = '" + mobno + "';"
 
-                rec = Apptools.sql_run(self, def_query)
+            if rec:
+                out = Apptools.sql_run(self, query_2,query_3)
+                cond1=Apptools.in_limit(self,10**9,10**10,mobno)
+                cond2=Apptools.in_limit(self, 0, 150, age)
+                cond3=Apptools.check_digit(self, age, pin,mobno)
+                cond4=mobno.find(".")==-1 and mobno.find("-")==-1
+                cond5=Apptools.is_not_null(self, name, age, gender,mobno, user, pswd, repass, pin,mobno,OrgName,OrgAdd)
+                cond6=len(pin)>=6
 
-                if rec:
-                    out = Apptools.sql_run(self, query_2,query_3)
-                    cond1=Apptools.in_limit(self,10**9,10**10,mobno)
-                    cond2=Apptools.in_limit(self, 0, 150, age)
-                    cond3=Apptools.check_digit(self, age, pin,mobno)
-                    cond4=mobno.find(".")==-1 and mobno.find("-")==-1
-                    cond5=Apptools.is_not_null(self, name, age, gender,mobno, user, pswd, repass, pin,mobno,OrgName,OrgAdd)
-                    cond6=len(pin)>=6
-
-                    if cond1 and cond2 and cond3 and cond4 and cond5:
-                        if out == [[],[]]:
-                            if not(cond6):
-                                messagebox.showwarning("Weak PIN", "PIN must be of atleast 6 digits.")
-                                return
-                            uid=str(Apptools.generate_id(self, "logindataseller"))
-                            walno=Apptools.generatewalletno(self)
-                            if walno:
-                                VALUE = "("+uid+ ", '"+ name+ "', "+ age+ ", '"+ gender+"',"
-                                VALUE+= mobno+",'"+OrgName+"','"+OrgAdd+"','"+ user+ "', '"+ pswd + "', '"+walno+"',"+ pin+ ");"
-
-                                sql_query ="Insert into logindataseller values"
-                                sql_query+=VALUE
-                                rec=Apptools.sql_run(self, sql_query)
-                                if rec is not None:
-                                    Apptools.sql_run(self,Apptools.defaultquerywalletbank(self))
-                                    query_2="Insert into walletbank Values('"+walno+"','S',0,"+pin+");"
-                                    rec2=Apptools.sql_run(self, query_2)
-                                    if rec2 is not None:
-                                        messagebox.showinfo("Registration done", "Registered user successfully")
-                                        master.switch_frame(Homepage)
-                        else:
-                            if out[0]!=[]:
-                                messagebox.showinfo("Sorry! Username already taken", "Try a different username")
-                            if out[1]!=[]:
-                                messagebox.showinfo("Sorry! Mobile number is already taken", "Try a different mobile number")
+                if cond1 and cond2 and cond3 and cond4 and cond5:
+                    if out == [[],[]]:
+                        if not(cond6):
+                            messagebox.showwarning("Weak PIN", "PIN must be of atleast 6 digits.")
+                            return
+                        uid=str(Apptools.generate_id(self, "logindataseller"))
+                        walno=Apptools.generatewalletno(self)
+                        if walno:
+                            rec=Apptools.insertSQL(self,"logindataseller",int(uid),name,float(age),gender,int(mobno),OrgName,OrgAdd,user,pswd,walno,int(pin))
+                            if rec is not None:
+                                rec2=Apptools.insertSQL(self,"walletbank",walno,'S',0,int(pin))
+                                if rec2 is not None:
+                                    messagebox.showinfo("Registration done", "Registered user successfully")
+                                    master.switch_frame(Homepage)
                     else:
-                        messagebox.showinfo("Invalid entry", "Fill all the entry correctly to proceed")
+                        if out[0]!=[]:
+                            messagebox.showinfo("Sorry! Username already taken", "Try a different username")
+                        if out[1]!=[]:
+                            messagebox.showinfo("Sorry! Mobile number is already taken", "Try a different mobile number")
+                else:
+                    messagebox.showinfo("Invalid entry", "Fill all the entry correctly to proceed")
         else:
             messagebox.showwarning("Password Mismatch", "Re-enter Password")
 
@@ -1061,6 +1053,7 @@ class Page3_DashboardSeller(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master, bg="#333333")
         self.makeWidgets(master)
+
     def makeWidgets(self, master):
         lbl = tk.Label(self, text="Kans:Your Shopping Partner")
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
@@ -1080,13 +1073,17 @@ class Page3_DashboardSeller(tk.Frame):
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=4, column=0, pady=3)
 
-        btn=tk.Button(self,text="Items Mangament",command=lambda: master.switch_frame(Page3_SellerItemManagement))
+        btn=tk.Button(self,text="Wallet Mangament",command=lambda: master.switch_frame(Page3_SellerWalletManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=5, column=0, pady=3)
 
-        btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
+        btn=tk.Button(self,text="Items Management",command=lambda: master.switch_frame(Page3_SellerItemManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=6, column=0, pady=3)
+
+        btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=7, column=0, pady=3)
 
 class Page3_DashboardBuyer(tk.Frame):
     def __init__(self, master):
@@ -1107,15 +1104,15 @@ class Page3_DashboardBuyer(tk.Frame):
 
         Apptools.image_Show(self, "Lighthouse.jpg", 3, 0, 300, 200)
 
-        btn=tk.Button(self,text="Profile",command=lambda: master.switch_frame(Page3_BuyerProfileManagement))
+        btn=tk.Button(self,text="Profile Management",command=lambda: master.switch_frame(Page3_BuyerProfileManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=4, column=0, pady=3)
 
-        btn=tk.Button(self,text="Wallet",command=lambda: master.switch_frame(Page3_BuyerWallet))
+        btn=tk.Button(self,text="Wallet Management",command=lambda: master.switch_frame(Page3_BuyerWallet))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=5, column=0, pady=3)
 
-        btn=tk.Button(self,text="Apply for Premium Membership",command=lambda: master.switch_frame(Page3_BuyerPremium))
+        btn=tk.Button(self,text="Premium Membership",command=lambda: master.switch_frame(Page3_BuyerPremium))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=6, column=0, pady=3)
 
@@ -1138,7 +1135,7 @@ class Page3_AdminProfileManagement(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=2, sticky="w")
+        btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Kans:Your Shopping Partner")
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
@@ -1178,7 +1175,7 @@ class Page3_AdminWalletManagement(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=2, sticky="w")
+        btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Kans:Your Shopping Partner")
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
@@ -1217,7 +1214,7 @@ class Page3_SellerProfileManagement(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=2, sticky="w")
+        btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Kans:Your Shopping Partner")
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
@@ -1237,21 +1234,46 @@ class Page3_SellerProfileManagement(tk.Frame):
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=5, column=1, pady=3)
 
-        btn=tk.Button(self,text="Check Balance",command=lambda: master.switch_frame(Page4_SellerCheckBalance))
+        btn=tk.Button(self,text="Delete Account",command=lambda: master.switch_frame(Page4_SellerDeleteAccount))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=6, column=1, pady=3)
 
+
+class Page3_SellerWalletManagement(tk.Frame):
+    def __init__(self, master):
+        tk.Frame.__init__(self, master, bg="#333333")
+        self.makeWidgets(master)
+
+    def makeWidgets(self, master):
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_DashboardSeller))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=0, column=0, sticky="w")
+
+        btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=0, column=2, sticky="e")
+
+        lbl = tk.Label(self, text="Kans:Your Shopping Partner")
+        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=1, column=1,padx=20,pady=10)
+
+        lbl = tk.Label(self, text="Wallet Management")
+        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=2, column=1)
+
+        Apptools.image_Show(self, "Lighthouse.jpg", 3, 1, 200, 150)
+
+        btn=tk.Button(self,text="Check Balance",command=lambda: master.switch_frame(Page4_SellerCheckBalance))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=4, column=1, pady=3)
+
         btn=tk.Button(self,text="Cashout Request",command=lambda: master.switch_frame(Page4_SellerCashoutRequest))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=7, column=1, pady=3)
+        btn.grid(row=5, column=1, pady=3)
 
         btn=tk.Button(self,text="Recharge Wallet Info",command=lambda: master.switch_frame(Page4_SellerWalletRecharge))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=8, column=1, pady=3)
-
-        btn=tk.Button(self,text="Delete Account",command=lambda: master.switch_frame(Page4_SellerDeleteAccount))
-        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=9, column=1, pady=3)
+        btn.grid(row=6, column=1, pady=3)
 
 
 class Page3_SellerItemManagement(tk.Frame):
@@ -1266,7 +1288,7 @@ class Page3_SellerItemManagement(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=2, sticky="w")
+        btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Kans:Your Shopping Partner")
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
@@ -1309,7 +1331,7 @@ class Page3_BuyerProfileManagement(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=2, sticky="w")
+        btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Kans:Your Shopping Partner")
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
@@ -1349,13 +1371,13 @@ class Page3_BuyerPremium(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=2, sticky="w")
+        btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Kans:Your Shopping Partner")
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,padx=20,pady=10)
 
-        lbl = tk.Label(self, text="Premium Mebership")
+        lbl = tk.Label(self, text="Premium Membership")
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1)
 
@@ -1369,7 +1391,7 @@ class Page3_BuyerPremium(tk.Frame):
 
         if self.CheckIsPremium():
             lbl = tk.Label(self, text="You already have our Premium Membership\nStart Shopping")
-            lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+            lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
             lbl.grid(row=4, column=1,pady=10)
         else:
             txt='''You are going to be charged Rs 100 from your wallet for
@@ -1383,36 +1405,32 @@ class Page3_BuyerPremium(tk.Frame):
             btn.grid(row=5, column=1,pady=3)
 
     def CheckIsPremium(self):
-        def_query=Apptools.defaultquerylogindata(self, "Buyer")
-        if def_query:
-            query_2 = "select ispremium from logindatabuyer where username = '" + G_USERNAME.get() + "';"
-            rec=Apptools.sql_run(self, def_query)
-            if rec:
-                out=Apptools.sql_run(self, query_2)[0][0][0]
-                if out.lower()=='y':
-                    return True
+        rec=Apptools.defaultqueryrun(self, "logindatabuyer")
+        query_2 = "select ispremium from logindatabuyer where username = '" + G_USERNAME.get() + "';"
+        if rec:
+            out=Apptools.sql_run(self, query_2)[0][0][0]
+            if out.lower()=='y':
+                return True
         return False
 
     def getmembership(self,master):
-        def_query=Apptools.defaultquerylogindata(self, "Buyer")
-        if def_query:
-            query_2 = "Select WalNo from logindatabuyer where username='"+G_USERNAME.get()+"';"
-            query_3 = "Update logindatabuyer set isPremium='Y' where username = '" + G_USERNAME.get() + "';"
+        rec=Apptools.defaultqueryrun(self, "logindatabuyer")
+        query_2 = "Select WalNo from logindatabuyer where username='"+G_USERNAME.get()+"';"
+        query_3 = "Update logindatabuyer set isPremium='Y' where username = '" + G_USERNAME.get() + "';"
 
-            rec=Apptools.sql_run(self, def_query)
-            if rec:
-                Walno=Apptools.sql_run(self, query_2)[0][0][0]
-                out = Apptools.checkBalance(self,Walno,G_PIN.get())
-                if out is not None and out>=100:
-                    query_4 = "Update walletbank set amt=amt-100 where WalNo='"+Walno+"';"
-                    rec2=Apptools.sql_run(self, query_4)
-                    if rec2:
-                        rec3=Apptools.sql_run(self, query_3)
-                        if rec3 is not None:
-                            messagebox.showinfo("You are now a premium member","Get exclusive discount and benefits.\nStart Shooping")
-                            master.switch_frame(Page3_DashboardBuyer)
-                elif out is not None and out<100:
-                    messagebox.showwarning("Insufficient fund in wallet","Please recharge your wallet to continue.")
+        if rec:
+            Walno=Apptools.sql_run(self, query_2)[0][0][0]
+            out = Apptools.checkBalance(self,Walno,G_PIN.get())
+            if out is not None and out>=100:
+                query_4 = "Update walletbank set amt=amt-100 where WalNo='"+Walno+"';"
+                rec2=Apptools.sql_run(self, query_4)
+                if rec2:
+                    rec3=Apptools.sql_run(self, query_3)
+                    if rec3 is not None:
+                        messagebox.showinfo("You are now a premium member","Get exclusive discount and benefits.\nStart Shooping")
+                        master.switch_frame(Page3_DashboardBuyer)
+            elif out is not None and out<100:
+                messagebox.showwarning("Insufficient fund in wallet","Please recharge your wallet to continue.")
 
 
 
@@ -1429,7 +1447,7 @@ class Page3_BuyerShoppe(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=2, sticky="w")
+        btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Kans:Your Shopping Partner")
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
@@ -1442,19 +1460,19 @@ class Page3_BuyerShoppe(tk.Frame):
         Apptools.image_Show(self, "Lighthouse.jpg", 3, 1, 200, 150)
 
         btn=tk.Button(self,text="Start Shopping",command=lambda: master.switch_frame(Page4_BuyerShopping))
-        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.config(bg="#1F8EE7",fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=4, column=1, pady=3)
 
         btn=tk.Button(self,text="Search items",command=lambda: master.switch_frame(Page4_BuyerSearchItems))
-        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.config(bg="#1F8EE7",padx=6,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=5, column=1, pady=3)
 
         btn=tk.Button(self,text="Wishlist",command=lambda: master.switch_frame(Page4_BuyerWishlist))
-        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.config(bg="#1F8EE7",padx=19,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=6, column=1, pady=3)
 
         btn=tk.Button(self,text="Cart",command=lambda: master.switch_frame(Page4_BuyerCart))
-        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.config(bg="#1F8EE7",padx=29,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=7, column=1, pady=3)
 
 
@@ -1470,7 +1488,7 @@ class Page3_BuyerWallet(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=2, sticky="w")
+        btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Kans:Your Shopping Partner")
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
@@ -1505,11 +1523,11 @@ class Page4_AdminShowProfile(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=3, sticky="e")
 
         lbl = tk.Label(self, text="Profile")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=20,pady=10)
+        lbl.grid(row=1, column=1,padx=20,pady=10,columnspan=2)
 
         Fieldname=["Name","Age","Gender","Mobile No."]
         query="select Name,age,Gender,MobNo from logindataadmin where username='"+G_USERNAME.get()+"';"
@@ -1530,7 +1548,7 @@ class Page4_AdminShowProfile(tk.Frame):
 
                 lbl = tk.Label(self, text=out[i])
                 lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
-                lbl.grid(row=i+2, column=3,padx=5)
+                lbl.grid(row=i+2, column=2,padx=5)
 
 class Page4_AdminEditProfile(tk.Frame):
     def __init__(self, master):
@@ -1544,11 +1562,11 @@ class Page4_AdminEditProfile(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=5, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Modify Profile")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=20,pady=10)
+        lbl.grid(row=1, column=1,columnspan=3,padx=20,pady=10)
 
         query="select Name,age,MobNo,Gender from logindataadmin where username='"+G_USERNAME.get()+"';"
         out = Apptools.sql_run(self, query)
@@ -1565,7 +1583,7 @@ class Page4_AdminEditProfile(tk.Frame):
             lbl.grid(row=i+2, column=1,padx=20,pady=5)
 
             Entry_Obj.append(tk.Entry(self, fg="#E8E8E8", bg="#333333"))
-            Entry_Obj[i].grid(row=i+2, column=3)
+            Entry_Obj[i].grid(row=i+2, column=2)
             Entry_Obj[i].insert(0, data[i])
 
         lbl = tk.Label(self, text="Gender")
@@ -1579,13 +1597,13 @@ class Page4_AdminEditProfile(tk.Frame):
             rbtn=Radiobutton(self,text=text,variable=gender,value=value)
             rbtn.config(activebackground="#333333",bg="#333333",fg="#E8E8E8")
             rbtn.config(selectcolor="#333333")
-            rbtn.grid(sticky="W", row=i, column=3,padx=15)
+            rbtn.grid(row=i, column=2,padx=15)
             i += 1
 
         btn=tk.Button(self,text="Modify Profile")
         btn.config(command=lambda: self.modifyProfile(master,Entry_Obj[0].get(),Entry_Obj[1].get(),gender.get(),Entry_Obj[2].get()))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=8, column=4,pady=10)
+        btn.grid(row=8, column=3,pady=10)
 
     def modifyProfile(self,master,name,age,gender,mobno):
         cond1=Apptools.in_limit(self,10**9,10**10,mobno)
@@ -1621,11 +1639,11 @@ class Page4_AdminCheckBalance(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Check Balance")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Enter PIN")
         lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
@@ -1650,7 +1668,7 @@ class Page4_AdminCheckBalance(tk.Frame):
 
                     lbl = tk.Label(self, text="The Precious Money in your wallet is\n₹ "+str(bal))
                     lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
-                    lbl.grid(row=4, column=2,padx=20,pady=20)
+                    lbl.grid(row=4, column=1,columnspan=3,padx=20,pady=20)
 
                 else:
                     messagebox.showerror("No such user exists!","Try relogin to our app(possible server glitch or your id is deleted by devs)")
@@ -1669,11 +1687,11 @@ class Page4_AdminDeleteAccount(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Delete Account")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Enter PIN")
         lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
@@ -1692,7 +1710,7 @@ class Page4_AdminDeleteAccount(tk.Frame):
         as per Company's Terms of Service"""
         lbl = tk.Label(self, text=msg)
         lbl.config(font=("Segoe Print", 10), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=4, column=2,pady=10)
+        lbl.grid(row=4, column=1,columnspan=3,pady=10)
 
     def checkDel(self,master,pin):
         if pin==G_PIN.get():
@@ -1725,7 +1743,7 @@ class Page4_AdminDeleteAccount(tk.Frame):
                                         rec=Apptools.sql_run(self,del_query1,del_query2,del_query3)
                                         if rec:
                                             messagebox.showinfo("Success", "Account Deleted Successfully")
-                                            master.switch_frame(Homepage)
+                                            Apptools.logout(self,master)
 
                             else:
                                 if bal>0:
@@ -1757,11 +1775,11 @@ class Page4_AdminCashout(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Cash withdrawl")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,pady=10)
+        lbl.grid(row=1, column=1,columnspan=3,pady=10)
 
         lbl = tk.Label(self, text="Enter Username")
         lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
@@ -1815,12 +1833,12 @@ class Page4_AdminCashout(tk.Frame):
                 if out[0]!=[]:
                     walno=out[0][0][0]
 
-                    def_query=Apptools.defaultquerytempbank(self)
+                    rec=Apptools.defaultqueryrun(self,"tempbank")
                     query="Select encode from tempbank where seccode='"+key+"';"
-                    out=Apptools.sql_run(self,def_query,query)
-                    if out is not None:
-                        if out[1]!=[]:
-                            seq=out[1][0][0]
+                    out=Apptools.sql_run(self,query)
+                    if out is not None and rec:
+                        if out[0]!=[]:
+                            seq=out[0][0][0]
                             kwal,kbal=Apptools.keydecoder(self,key,seq)
                             if kwal==walno and amt==str(kbal):
                                 query_2="select walno from logindataadmin where username='"+G_USERNAME.get()+"';"
@@ -1831,11 +1849,11 @@ class Page4_AdminCashout(tk.Frame):
                                         if admwalno != walno:
                                             query_3="Update walletbank set amt=amt+5 where walno = '"+admwalno+"';"
                                             query_4="Update cashinhandadmin set bal=bal-"+str(kbal-5)+" where username='"+G_USERNAME.get()+"';"
-                                            rec=Apptools.sql_run(self,query_3,query_4)
-                                            if rec is not None:
+                                            rec2=Apptools.sql_run(self,query_3,query_4)
+                                            if rec2 is not None:
                                                 query_4="delete from tempbank where seccode='"+key+"';"
-                                                rec2=Apptools.sql_run(self,query_4)
-                                                if rec2:
+                                                rec3=Apptools.sql_run(self,query_4)
+                                                if rec3:
                                                     messagebox.showinfo("Success!","Cashout Successful")
 
                                                     lbl = tk.Label(self, text="Withdrawl Amount : "+amt+"\nAmount to be Paid : "+str(kbal-5)+"\nPG & Service Charges : 5")
@@ -1867,11 +1885,11 @@ class Page4_AdminSelfCashoutRequest(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Self Cashout Request")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Enter PIN")
         lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
@@ -1889,7 +1907,7 @@ class Page4_AdminSelfCashoutRequest(tk.Frame):
         No custom amount can't be put"""
         lbl = tk.Label(self, text=msg)
         lbl.config(font=("Segoe Print", 10), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=4, column=2,pady=10)
+        lbl.grid(row=4, column=1,columnspan=3,pady=10)
 
     def AdmSelfcashout(self,master,pin):
         if pin==G_PIN.get():
@@ -1911,7 +1929,7 @@ class Page4_AdminSelfCashoutRequest(tk.Frame):
 
                                     lbl = tk.Label(self, text="Successful\nAmount : "+str(bal)+"\nKey : "+key+"\nNote it down(Not recoverable)")
                                     lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
-                                    lbl.grid(row=5, column=2,pady=10)
+                                    lbl.grid(row=5, column=1,pady=10,columnspan=3)
                             else:
                                 messagebox.showwarning("Insufficient fund","There is insufficient money in your wallet.")
                                 master.switch_frame(Page3_DashboardAdmin)
@@ -1937,11 +1955,11 @@ class Page4_AdminTopupWallet(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Top-Up Account")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Enter Username")
         lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
@@ -2013,7 +2031,7 @@ class Page4_AdminTopupWallet(tk.Frame):
                                             msg="Transaction Receipt\nName : {0}\nNet Amount Recharged : {1}\nPG & Other Charge : 5\nCash Given by user : {2}".format(name,netamt,amt).strip()
                                             lbl = tk.Label(self, text=msg)
                                             lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
-                                            lbl.grid(row=9, column=2,pady=10,padx=5)
+                                            lbl.grid(row=9, column=1,columnspan=3,pady=10,padx=5)
                                     else:
                                         messagebox.showerror("TopUp not possible!","You can take topup your own personal account")
                                 else:
@@ -2036,7 +2054,7 @@ class Page4_AdminPendingCashout(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=2, sticky="w")
+        btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Pending Cashout")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
@@ -2046,12 +2064,12 @@ class Page4_AdminPendingCashout(tk.Frame):
 
 
     def pendingcashout(self):
-        def_query=Apptools.defaultquerytempbank(self)
+        rec=Apptools.defaultqueryrun(self,"tempbank")
         query="Select * from tempbank;"
-        out=Apptools.sql_run(self,def_query, query)
+        out=Apptools.sql_run(self,query)
 
-        if out is not None:
-            out=out[1]
+        if out is not None and rec:
+            out=out[0]
             if out!=[]:
                 for i in range(len(out)):
                     out[i]=Apptools.keydecoder(self, out[i][0], out[i][1])
@@ -2117,11 +2135,11 @@ class Page4_SellerShowProfile(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=3, sticky="e")
 
         lbl = tk.Label(self, text="Profile")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=20,pady=10)
+        lbl.grid(row=1, column=1,columnspan=2,padx=60,pady=10)
 
         Fieldname=["Name","Age","Gender","Mobile No.","Name of Organisation","Address of Organisation"]
         query="select Name,age,Gender,MobNo,orgName,AddOrg from logindataseller where username='"+G_USERNAME.get()+"';"
@@ -2142,7 +2160,7 @@ class Page4_SellerShowProfile(tk.Frame):
 
                 lbl = tk.Label(self, text=out[i])
                 lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
-                lbl.grid(row=i+2, column=3,padx=5)
+                lbl.grid(row=i+2, column=2,padx=5)
 
 class Page4_SellerEditProfile(tk.Frame):
     def __init__(self, master):
@@ -2155,11 +2173,11 @@ class Page4_SellerEditProfile(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Modify Profile")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=20,pady=10)
+        lbl.grid(row=1, column=1,columnspan=3,padx=20,pady=10)
 
         query="select Name,age,MobNo,orgName,AddOrg,Gender from logindataseller where username='"+G_USERNAME.get()+"';"
         out = Apptools.sql_run(self, query)
@@ -2234,17 +2252,17 @@ class Page4_SellerCheckBalance(tk.Frame):
         tk.Frame.__init__(self, master, bg="#333333")
         self.makeWidgets(master)
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_SellerProfileManagement))
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_SellerWalletManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Check Balance")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Enter PIN")
         lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
@@ -2269,7 +2287,7 @@ class Page4_SellerCheckBalance(tk.Frame):
 
                     lbl = tk.Label(self, text="The Precious Money in your wallet is\n₹ "+str(bal))
                     lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
-                    lbl.grid(row=4, column=2,padx=20,pady=20)
+                    lbl.grid(row=4, column=1,columnspan=3,padx=20,pady=20)
                 else:
                     messagebox.showerror("No such user exists!","Try relogin to our app(possible server glitch or your id is deleted by devs)")
         else:
@@ -2280,17 +2298,17 @@ class Page4_SellerCashoutRequest(tk.Frame):
         tk.Frame.__init__(self, master, bg="#333333")
         self.makeWidgets(master)
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_SellerProfileManagement))
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_SellerWalletManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Self Cashout Request")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Enter Balance")
         lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
@@ -2316,7 +2334,7 @@ class Page4_SellerCashoutRequest(tk.Frame):
         PG charges (Rs.5) is applicable."""
         lbl = tk.Label(self, text=msg)
         lbl.config(font=("Segoe Print", 10), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=5, column=2,pady=10)
+        lbl.grid(row=5, column=1,columnspan=3,pady=10)
 
     def Sellercashout(self,master,pin,amt):
         if pin==G_PIN.get():
@@ -2329,14 +2347,14 @@ class Page4_SellerCashoutRequest(tk.Frame):
                     cond1=Apptools.check_digit(self,amt)
                     cond2=Apptools.in_limit(self,0,10**7,amt)
                     if cond1 and cond2:
-                        if bal>int(amt) and int(amt)>5:
+                        if bal>=int(amt) and int(amt)>5:
                             key=Apptools.CashoutRequest(self,walno,amt)
                             if key is not None:
                                 messagebox.showinfo("Action Initiated","Use the Key to get access to your wallet amount (in cash) to our nearest agent.")
 
                                 lbl = tk.Label(self, text="Successful\nAmount : "+amt+"\nKey : "+key+"\nNote it down(Not recoverable)")
                                 lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
-                                lbl.grid(row=6, column=2,pady=10)
+                                lbl.grid(row=6, column=1,columnspan=3,pady=10)
                         else:
                             messagebox.showwarning("Insufficient fund","There is insufficient money in your wallet or amount withdrwn less than Rs. 5.")
                             master.switch_frame(Page3_DashboardSeller)
@@ -2354,13 +2372,13 @@ class Page4_SellerWalletRecharge(tk.Frame):
         self.makeWidgets(master)
 
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_SellerProfileManagement))
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_SellerWalletManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=2, sticky="w")
+        btn.grid(row=0, column=2, sticky="e")
 
         lbl = tk.Label(self, text="Wallet Recharge Info")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
@@ -2385,11 +2403,11 @@ class Page4_SellerDeleteAccount(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Delete Account")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Enter PIN")
         lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
@@ -2417,12 +2435,12 @@ class Page4_SellerDeleteAccount(tk.Frame):
                         if choice:
                             del_query1="Delete from logindataseller where username = '" + G_USERNAME.get() + "';"
                             del_query2="Delete from walletbank where walno = '" + walno + "';"
-                            def_query=Apptools.defaultqueryitems(self)
+                            rec=Apptools.defaultqueryrun(self,"items")
                             del_query3="Delete from items where SellerUsername = '" + G_USERNAME.get() + "';"
-                            rec=Apptools.sql_run(self,del_query1,del_query2,def_query,del_query3)
-                            if rec:
+                            rec2=Apptools.sql_run(self,del_query1,del_query2,del_query3)
+                            if rec and rec2:
                                 messagebox.showinfo("Success", "Account Deleted Successfully")
-                                master.switch_frame(Homepage)
+                                Apptools.logout(self,master)
                     else:
                         if bal>0:
                             msg="You have with us the precious money in your account,proceed for a cashout request before deleting account.\nInconvenience regretted"
@@ -2449,11 +2467,11 @@ class Page4_SellerAddItems(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Add Items")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Item Name")
         lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
@@ -2491,34 +2509,41 @@ class Page4_SellerAddItems(tk.Frame):
         IDesc.config(width=15)
         IDesc.grid(row=6, column=2)
 
-        lbl = tk.Label(self, text="Add Image")
+        lbl = tk.Label(self, text="Category")
         lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=7, column=1,padx=5,pady=10)
 
+        Category = ["Stationary","Electronics","Clothing","Beauty",
+                    "Softwares","Sports","Daily Use","Grocery","Health","Others"]
+
+        CategoryVar = StringVar(self, "Stationary")
+        Menu = tk.OptionMenu(self, CategoryVar, *Category)
+        Menu.config(bg="#333333", bd=0, fg="#E8E8E8", activebackground="#333333")
+        Menu["menu"].config(bg="#333333", fg="#E8E8E8", activebackground="#1F8EE7")
+        Menu.grid(row=7, column=2)
+
+        lbl = tk.Label(self, text="Add Image")
+        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=8, column=1,padx=5,pady=10)
+
         globals()['savlocimgbtn']="Additem.png"
-        Apptools.imgsavebtn(self,"Additem.png",100,100,7,2)
+        Apptools.imgsavebtn(self,"Additem.png",100,100,8,2)
 
         btn=tk.Button(self,text="Add Item")
-        btn.config(command=lambda: self.additem(master,Iname.get(),Iwhp.get(),Irp.get(),Istock.get(),IDesc.get("1.0","end-1c"),savlocimgbtn))
+        btn.config(command=lambda: self.additem(master,Iname.get(),Iwhp.get(),Irp.get(),Istock.get(),IDesc.get("1.0","end-1c"),CategoryVar.get(),savlocimgbtn))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=8, column=3,pady=10)
+        btn.grid(row=9, column=3,pady=10)
 
-    def additem(self,master,iname,iwp,irp,istock,idesc,filedir):
-        cond1=Apptools.is_not_null(self, iname, iwp, irp, istock, idesc,filedir)
+    def additem(self,master,iname,iwp,irp,istock,idesc,icat,filedir):
+        cond1=Apptools.is_not_null(self, iname, iwp, irp, istock, idesc,icat,filedir)
         cond2=Apptools.check_digit(self, iwp,irp,istock)
         filedir=filedir.replace("\\","\\\\")
         if cond1 and cond2:
-            def_query=Apptools.defaultqueryitems(self)
-            rec=Apptools.sql_run(self,def_query)
+            rec=Apptools.defaultqueryrun(self,"items")
 
-            if rec is not None:
+            if rec:
                 ino=Apptools.generate_id(self,"items","itemno")
-                query="Insert into items values("
-                Values=str(ino)+",'"+iname+"',"+iwp+","+irp+",'"+idesc+"',"+istock
-                Values+=",'"+filedir+"','"+G_USERNAME.get()+"');"
-                query+=Values
-
-                rec2=Apptools.sql_run(self,query)
+                rec2=Apptools.insertSQL(self,"items",int(ino),iname,float(iwp),float(irp),idesc,icat,int(istock),filedir,G_USERNAME.get())
 
                 if rec2 is not None:
                     messagebox.showinfo("Success!","Item added successfully")
@@ -2538,11 +2563,11 @@ class Page4_SellerModifyItems(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Modify Item Details")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Item Code")
         lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
@@ -2558,18 +2583,18 @@ class Page4_SellerModifyItems(tk.Frame):
 
         lbl = tk.Label(self, text="Item Code can be found in\nSearch Items Section.")
         lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=9, column=2,padx=5,pady=10)
+        lbl.grid(row=11, column=1,columnspan=3,padx=5,pady=10)
 
     def modify(self,master,itemno):
         cond1=Apptools.check_digit(self,itemno)
         if cond1:
-            def_query=Apptools.defaultqueryitems(self)
-            query="select iname,iwhp,irp,idesc,imgdir from items where itemno="+itemno+" and SellerUsername='"+G_USERNAME.get()+"';"
-            out = Apptools.sql_run(self, def_query,query)
+            rec=Apptools.defaultqueryrun(self,"items")
+            query="select iname,iwhp,irp,idesc,imgdir,icat from items where itemno="+itemno+" and SellerUsername='"+G_USERNAME.get()+"';"
+            out = Apptools.sql_run(self,query)
 
             data=["" for i in range(4)]
-            if out:
-                data = out[1]
+            if out and rec:
+                data = out[0]
                 if data!=[]:
                     data=data[0]
                     Entry_Obj=[]
@@ -2592,17 +2617,30 @@ class Page4_SellerModifyItems(tk.Frame):
                     Entry_Obj[3].grid(row=7, column=2)
                     Entry_Obj[3].insert(tk.INSERT, data[3])
 
-                    lbl = tk.Label(self, text="Add Image")
+                    lbl = tk.Label(self, text="Category")
                     lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
                     lbl.grid(row=8, column=1,padx=5,pady=10)
 
+                    Category = ["Stationary","Electronics","Clothing","Beauty",
+                                "Softwares","Sports","Daily Use","Grocery","Health","Others"]
+
+                    CategoryVar = StringVar(self, data[5].title())
+                    Menu = tk.OptionMenu(self, CategoryVar, *Category)
+                    Menu.config(bg="#333333", bd=0, fg="#E8E8E8", activebackground="#333333")
+                    Menu["menu"].config(bg="#333333", fg="#E8E8E8", activebackground="#1F8EE7")
+                    Menu.grid(row=8, column=2)
+
+                    lbl = tk.Label(self, text="Add Image")
+                    lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+                    lbl.grid(row=9, column=1,padx=5,pady=10)
+
                     globals()['savlocimgbtn']=data[4]
-                    Apptools.imgsavebtn(self,savlocimgbtn,100,100,8,2,data[4])
+                    Apptools.imgsavebtn(self,savlocimgbtn,100,100,9,2,data[4])
 
                     btn=tk.Button(self,text="Modify Details")
-                    btn.config(command=lambda: self.modifyDetails(master,itemno,Entry_Obj[0].get(),Entry_Obj[1].get(),Entry_Obj[2].get(),Entry_Obj[3].get("1.0","end-1c"),savlocimgbtn))
+                    btn.config(command=lambda: self.modifyDetails(master,itemno,Entry_Obj[0].get(),Entry_Obj[1].get(),Entry_Obj[2].get(),Entry_Obj[3].get("1.0","end-1c"),CategoryVar.get(),savlocimgbtn))
                     btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-                    btn.grid(row=9, column=3,pady=10)
+                    btn.grid(row=10, column=3,pady=10)
 
                 else:
                     messagebox.showwarning("Invalid Item Code","Item Code is incorrect")
@@ -2612,16 +2650,17 @@ class Page4_SellerModifyItems(tk.Frame):
 
 
 
-    def modifyDetails(self,master,itemno,iname,iwhp,irp,idesc,filedir):
-        cond1=Apptools.is_not_null(self, iname, iwhp, irp, idesc,filedir)
+    def modifyDetails(self,master,itemno,iname,iwhp,irp,idesc,icat,filedir):
+        cond1=Apptools.is_not_null(self, iname, iwhp, irp, idesc,icat,filedir)
         cond2=Apptools.check_digit(self, iwhp,irp)
+        Category = ["Stationary","Electronics","Clothing","Beauty",
+                                "Softwares","Sports","Daily Use","Grocery","Health","Others"]
+        cond3=icat.title() in Category
         filedir=filedir.replace("\\","\\\\")
-        if cond1 and cond2:
-            def_query=Apptools.defaultqueryitems(self)
-            rec=Apptools.sql_run(self,def_query)
-
-            if rec is not None:
-                query_2 = "Update items Set iname='"+iname+"',iwhp="+iwhp+",irp="+irp+",idesc='"+idesc+"',imgdir='"+filedir+"' where itemno="+str(itemno)+";"
+        if cond1 and cond2 and cond3:
+            rec=Apptools.defaultqueryrun(self,"items")
+            if rec:
+                query_2 = "Update items Set iname='"+iname+"',iwhp="+iwhp+",irp="+irp+",idesc='"+idesc+"',imgdir='"+filedir+"',icat='"+icat+"' where itemno="+str(itemno)+";"
                 rec2=Apptools.sql_run(self, query_2)
 
                 if rec2 is not None:
@@ -2643,11 +2682,11 @@ class Page4_SellerAddStocks(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Add Stocks")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Item Code")
         lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
@@ -2663,16 +2702,16 @@ class Page4_SellerAddStocks(tk.Frame):
 
         lbl = tk.Label(self, text="Item Code can be found in\nSearch Items Section.")
         lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=6, column=2,padx=5,pady=10)
+        lbl.grid(row=6, column=1,columnspan=3,padx=5,pady=10)
 
     def modify(self,master,itemno):
         cond1=Apptools.check_digit(self,itemno)
         if cond1:
-            def_query=Apptools.defaultqueryitems(self)
+            rec=Apptools.defaultqueryrun(self,"items")
             query="select istock from items where itemno="+itemno+" and SellerUsername='"+G_USERNAME.get()+"';"
-            out = Apptools.sql_run(self, def_query,query)
-            if out:
-                data = out[1]
+            out = Apptools.sql_run(self,query)
+            if out and rec:
+                data = out[0]
                 if data!=[]:
                     data=data[0][0]
                     lbl = tk.Label(self, text="No. of Stocks")
@@ -2698,10 +2737,9 @@ class Page4_SellerAddStocks(tk.Frame):
     def modifyDetails(self,master,itemno,istock):
         cond1=Apptools.check_digit(self, itemno,istock)
         if cond1:
-            def_query=Apptools.defaultqueryitems(self)
-            rec=Apptools.sql_run(self,def_query)
+            rec=Apptools.defaultqueryrun(self,"items")
 
-            if rec is not None:
+            if rec:
                 query_2 = "Update items Set istock="+istock+" where itemno="+str(itemno)+";"
                 rec2=Apptools.sql_run(self, query_2)
 
@@ -2722,17 +2760,17 @@ class Page4_SellerSearchItem(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=5, sticky="e")
 
         lbl = tk.Label(self, text="Search Items")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=1,columnspan=4,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Search Criteria")
         lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=5,pady=10)
 
-        Searchcr = ["Item Name","Wholesale Price","Retail Price","Description"]
+        Searchcr = ["Item Name","Wholesale Price","Retail Price","Description","Category"]
 
         SearchcrVar = StringVar(self, "Item Name")
         Menu = tk.OptionMenu(self, SearchcrVar, *Searchcr)
@@ -2750,17 +2788,21 @@ class Page4_SellerSearchItem(tk.Frame):
         btn=tk.Button(self,text="Search")
         btn.config(command=lambda: self.search(val.get(),SearchcrVar.get()))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=3, column=3,pady=10)
+        btn.grid(row=4, column=3,pady=10)
 
         btn=tk.Button(self,text="Show All")
         btn.config(command=self.showAll)
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=4, column=3,pady=10)
+        btn.grid(row=5, column=3,pady=10)
+
+        btn=tk.Button(self,text="Out of Stock")
+        btn.config(command=self.outofstock)
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=5, column=4,padx=5)
 
     def search(self, text, criteria):
-        def_query = Apptools.defaultqueryitems(self)
+        Apptools.defaultqueryrun(self,"items")
 
-        Apptools.sql_run(self, def_query)
         if Apptools.is_not_null(self, text):
             if criteria not in ("Wholesale Price","Retail Price"):
                 query ="Select * from items where "+ self.dbeqv(criteria)+ " like '%"+ text+ "%' and SellerUsername='"+G_USERNAME.get()+"';"
@@ -2783,7 +2825,7 @@ class Page4_SellerSearchItem(tk.Frame):
 
     def dbeqv(self,colname):
         txt=""
-        data = ["Item Name","Wholesale Price","Retail Price","Description"]
+        data = ["Item Name","Wholesale Price","Retail Price","Description","Category"]
         if colname==data[0]:
             txt="iname"
         elif colname==data[1]:
@@ -2792,20 +2834,32 @@ class Page4_SellerSearchItem(tk.Frame):
             txt="irp"
         elif colname==data[3]:
             txt="idesc"
+        elif colname==data[4]:
+            txt="icat"
         return txt
 
     def showAll(self):
-        def_query = Apptools.defaultqueryitems(self)
-
-        Apptools.sql_run(self, def_query)
-        sqlite_query = "Select * from items where SellerUsername='"+G_USERNAME.get()+"';"
-        record = Apptools.sql_run(self, sqlite_query)
+        Apptools.defaultqueryrun(self,"items")
+        sql_query = "Select * from items where SellerUsername='"+G_USERNAME.get()+"';"
+        record = Apptools.sql_run(self, sql_query)
         if record is not None:
             out = record[0]
             if out != []:
                 self.output(out)
         if out == []:
             messagebox.showinfo("No data", "No records found")
+
+    def outofstock(self):
+        Apptools.defaultqueryrun(self,"items")
+
+        sql_query = "Select * from items where SellerUsername='"+G_USERNAME.get()+"' and istock=0;"
+        record = Apptools.sql_run(self, sql_query)
+        if record is not None:
+            out = record[0]
+            if out != []:
+                self.output(out)
+            if out == []:
+                messagebox.showinfo("No data", "No records found")
 
     def output(self, out):
         screen = tk.Toplevel(self, bg="#333333")
@@ -2817,7 +2871,7 @@ class Page4_SellerSearchItem(tk.Frame):
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=0, column=0,padx=30,pady=10)
 
-        column=("Item no.","Item Name","Wholesale Price","Retail Price","Description","Stock")
+        column=("Item no.","Item Name","Wholesale Price","Retail Price","Description","Category","Stock")
         listBox = ttk.Treeview(screen)
 
         verscrlbar = ttk.Scrollbar(screen, orient ="vertical",command = listBox.yview)
@@ -2836,9 +2890,9 @@ class Page4_SellerSearchItem(tk.Frame):
         listBox.grid(row=1, column=0)
 
         for i in out:
-            listBox.insert("", "end", values=i[:6])
+            listBox.insert("", "end", values=i[:len(column)])
 
-            for indx, val in enumerate(i[:6]):
+            for indx, val in enumerate(i[:len(column)]):
                 ilen = tkFont.Font().measure(val)
                 if listBox.column(column[indx], width=None) < ilen:
                     listBox.column(column[indx], width=ilen)
@@ -2873,11 +2927,11 @@ class Page4_SellerRemoveItem(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Remove Item")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Item Code")
         lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
@@ -2893,16 +2947,16 @@ class Page4_SellerRemoveItem(tk.Frame):
 
         lbl = tk.Label(self, text="Item Code can be found in\nSearch Items Section.")
         lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=6, column=2,padx=5,pady=10)
+        lbl.grid(row=6, column=1,columnspan=3,padx=5,pady=10)
 
     def deleteitem(self,master,itemno):
         cond1=Apptools.check_digit(self,itemno)
         if cond1:
-            def_query=Apptools.defaultqueryitems(self)
+            rec=Apptools.defaultqueryrun(self,"items")
             query="select iname,irp,idesc from items where itemno="+itemno+" and SellerUsername='"+G_USERNAME.get()+"';"
-            out = Apptools.sql_run(self, def_query,query)
-            if out:
-                data = out[1]
+            out = Apptools.sql_run(self,query)
+            if rec and out:
+                data = out[0]
                 if data!=[]:
                     data=data[0]
                     txt="Name = "+data[0]+"\nPrice = "+str(data[1])+"\nDescription = "+data[2]
@@ -2912,6 +2966,7 @@ class Page4_SellerRemoveItem(tk.Frame):
                         rec = Apptools.sql_run(self, del_query)
                         if rec is not None:
                             messagebox.showinfo("Success","Item Removed Successfully")
+                            Apptools.clearImgCache(self)
                             master.switch_frame(Page3_SellerItemManagement)
                 else:
                     messagebox.showwarning("Invalid Item Code","Item Code is incorrect")
@@ -2931,11 +2986,11 @@ class Page4_BuyerShowProfile(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=3, sticky="e")
 
         lbl = tk.Label(self, text="Profile")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=1,columnspan=2,padx=30,pady=10)
 
         Fieldname=["Name","Age","Gender","Mobile No.","Premium Member","Delivery Address"]
         query="select Name,age,Gender,MobNo,ispremium,deladd from logindatabuyer where username='"+G_USERNAME.get()+"';"
@@ -2960,7 +3015,7 @@ class Page4_BuyerShowProfile(tk.Frame):
 
                 lbl = tk.Label(self, text=out[i])
                 lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
-                lbl.grid(row=i+2, column=3,padx=5)
+                lbl.grid(row=i+2, column=2,padx=5)
 
 
 class Page4_BuyerEditProfile(tk.Frame):
@@ -2974,11 +3029,11 @@ class Page4_BuyerEditProfile(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Modify Profile")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=20,pady=10)
+        lbl.grid(row=1, column=1,columnspan=3,padx=20,pady=10)
 
         query="select Name,age,MobNo,deladd,gender from logindatabuyer where username='"+G_USERNAME.get()+"';"
         out = Apptools.sql_run(self, query)
@@ -3059,11 +3114,11 @@ class Page4_BuyerRecentlyBrought(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Recently Brought")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Page Under Construction")
         lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
@@ -3080,11 +3135,11 @@ class Page4_BuyerDeleteAccount(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Delete Account")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Enter PIN")
         lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
@@ -3115,7 +3170,7 @@ class Page4_BuyerDeleteAccount(tk.Frame):
                             rec=Apptools.sql_run(self,del_query1,del_query2)
                             if rec:
                                 messagebox.showinfo("Success", "Account Deleted Successfully")
-                                master.switch_frame(Homepage)
+                                Apptools.logout(self,master)
                     else:
                         if bal>0:
                             msg="You have with us the precious money in your account,proceed for a cashout request before deleting account.\nInconvenience regretted"
@@ -3142,11 +3197,11 @@ class Page4_BuyerCheckBalance(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Check Balance")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Enter PIN")
         lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
@@ -3171,7 +3226,7 @@ class Page4_BuyerCheckBalance(tk.Frame):
 
                     lbl = tk.Label(self, text="The Precious Money in your wallet is\n₹ "+str(bal))
                     lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
-                    lbl.grid(row=4, column=2,padx=20,pady=20)
+                    lbl.grid(row=4, column=1,columnspan=3,padx=20,pady=20)
                 else:
                     messagebox.showerror("No such user exists!","Try relogin to our app(possible server glitch or your id is deleted by devs)")
         else:
@@ -3188,11 +3243,11 @@ class Page4_BuyerCashout(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Self Cashout Request")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
 
         lbl = tk.Label(self, text="Enter Balance")
         lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
@@ -3218,7 +3273,7 @@ class Page4_BuyerCashout(tk.Frame):
         PG charges (Rs.5) is applicable."""
         lbl = tk.Label(self, text=msg)
         lbl.config(font=("Segoe Print", 10), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=5, column=2,pady=10)
+        lbl.grid(row=5, column=1,columnspan=3,pady=10)
 
     def buyercashout(self,master,pin,amt):
         if pin==G_PIN.get():
@@ -3231,16 +3286,16 @@ class Page4_BuyerCashout(tk.Frame):
                     cond1=Apptools.check_digit(self,amt)
                     cond2=Apptools.in_limit(self,0,10**7,amt)
                     if cond1 and cond2:
-                        if bal>int(amt) and int(amt)>5:
+                        if bal>=int(amt) and int(amt)>5:
                             key=Apptools.CashoutRequest(self,walno,amt)
                             if key is not None:
                                 messagebox.showinfo("Action Initiated","Use the Key to get access to your wallet amount (in cash) to our nearest agent.")
 
                                 lbl = tk.Label(self, text="Successful\nAmount : "+amt+"\nKey : "+key+"\nNote it down(Not recoverable)")
                                 lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
-                                lbl.grid(row=6, column=2,pady=10)
+                                lbl.grid(row=6, column=1,columnspan=3,pady=10)
                         else:
-                            messagebox.showwarning("Insufficient fund","There is insufficient money in your wallet or amount withdrwn less than Rs. 5.")
+                            messagebox.showwarning("Insufficient fund","There is insufficient money in your wallet or amount withdrawn less than Rs. 5.")
                             master.switch_frame(Page3_DashboardBuyer)
                     else:
                         messagebox.showwarning("Invalid entry","Enter a valid amount(Max 1 Crore).")
@@ -3260,7 +3315,7 @@ class Page4_BuyerWalletRecharge(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Wallet Recharge Info")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
@@ -3281,30 +3336,74 @@ class Page4_BuyerShopping(tk.Frame):
         self.makeWidgets(master)
 
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_AdminProfileManagement))
+
+        canvas = tk.Canvas(self, bg="#333333")
+        scrollbar = ttk.Scrollbar(self, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(
+                scrollregion=canvas.bbox("all")
+            )
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.configure(width=500,height=500)
+
+        canvas.grid(row=0,column=0)
+        scrollbar.grid(row=0,column=5)
+        scrollable_frame.grid(row=0,column=5)
+
+
+        self=scrollable_frame
+
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_BuyerShoppe))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
-        lbl = tk.Label(self, text="Delete Account")
+        lbl = tk.Label(self, text="Kans\nStart Shopping")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=1,pady=10,columnspan=2)
+
+        Apptools.image_Show(self, "Lighthouse.jpg", 2, 0, 700, 110,cspan=5)
+
+        Dir=["Img1.jpg","Img2.png","Img3.jpg","Img4.jpg","Img5.png","Img6.png"]
+        Dir+=["Img7.jpg","Img8.png","Img9.jpg","Img10.png","Img11.png","Img12.png"]
+        r,c=3,1
+        for i in range(len(Dir)):
+            imgbtn=Apptools.imageButton(self,"CardsShop//"+Dir[i],125,75,r,c)
+            imgbtn.config(command=lambda: master.switch_frame(Page3_BuyerShoppe))
+            if c==3:
+                r+=1
+                c=1
+            else:
+                c+=1
+
+
+
+
+
+
 
 class Page4_BuyerSearchItems(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master, bg="#333333")
         self.makeWidgets(master)
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_AdminProfileManagement))
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_BuyerShoppe))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Delete Account")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
@@ -3315,13 +3414,13 @@ class Page4_BuyerWishlist(tk.Frame):
         tk.Frame.__init__(self, master, bg="#333333")
         self.makeWidgets(master)
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_AdminProfileManagement))
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_BuyerShoppe))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Delete Account")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
@@ -3332,13 +3431,13 @@ class Page4_BuyerCart(tk.Frame):
         tk.Frame.__init__(self, master, bg="#333333")
         self.makeWidgets(master)
     def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_AdminProfileManagement))
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_BuyerShoppe))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="w")
+        btn.grid(row=0, column=4, sticky="e")
 
         lbl = tk.Label(self, text="Delete Account")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
