@@ -19,6 +19,7 @@ from PIL import Image, ImageTk
 import random
 import os
 import errno
+from datetime import datetime
 
 HOST="localhost"
 USERNAME="root"
@@ -29,6 +30,9 @@ savedir="C:\\Kans\\App\\ItemImage\\"
 savlocimgbtn=""
 itemtype=-1
 chooseditemdetails=[]
+
+#Username of Super Admin (All PG Charges transfers here from buying items)
+SUPERADMIN='1'
 
 
 class Apptools:
@@ -254,13 +258,14 @@ class Apptools:
 
         elif table=="trecord":
             def_query="""Create table IF NOT EXISTS trecord(
-            tuid int PRIMARY KEY,
-            tid int PRIMARY KEY,
+            tuid varchar(8) PRIMARY KEY,
+            tid varchar(8) ,
             tdate datetime NOT NULL,
-            tqty int NOT NULL,
             titemno int NOT NULL,
+            tqty int NOT NULL,
             tpaidamt int NOT NULL,
-            BuyerUsername varchar(32) NOT NULL);"""
+            BuyerUsername varchar(32) NOT NULL,
+            SellerUsername varchar(32) NOT NULL);"""
         else:
             def_query=None
         rec=None
@@ -1374,6 +1379,10 @@ class Page3_SellerItemManagement(tk.Frame):
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=8, column=1, pady=3)
 
+        btn=tk.Button(self,text="Recent Transactions",command=lambda: master.switch_frame(Page4_SellerRecentTransactions))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=9, column=1, pady=3)
+
 class Page3_BuyerProfileManagement(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master, bg="#333333")
@@ -1525,7 +1534,7 @@ class Page3_BuyerShoppe(tk.Frame):
         btn.config(bg="#1F8EE7",padx=19,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=6, column=1, pady=3)
 
-        btn=tk.Button(self,text="Cart",command=lambda: master.switch_frame(Page4_BuyerCart))
+        btn=tk.Button(self,text="Cart",command=lambda: master.switch_frame(Page7_BuyerPaymentProceed))
         btn.config(bg="#1F8EE7",padx=29,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=7, column=1, pady=3)
 
@@ -3028,6 +3037,116 @@ class Page4_SellerRemoveItem(tk.Frame):
             messagebox.showwarning("Invalid Field","Fill all the forms correctly to continue")
 
 
+class Page4_SellerRecentTransactions(tk.Frame):
+    def __init__(self, master):
+        tk.Frame.__init__(self, master, bg="#333333")
+        self.makeWidgets(master)
+    def makeWidgets(self, master):
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_SellerItemManagement))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=0, column=0, sticky="w")
+
+        btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=0, column=3, sticky="e")
+
+        lbl = tk.Label(self, text="Transaction Log")
+        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=1, column=0,columnspan=4,padx=30,pady=10)
+
+        self.recentlybrought()
+
+
+    def recentlybrought(self):
+        rec=Apptools.defaultqueryrun(self,"trecord")
+        query="Select * from trecord where SellerUsername='"+G_USERNAME.get()+"';"
+        out=Apptools.sql_run(self,query)
+
+        if out is not None and rec:
+            out=out[0]
+            if out!=[]:
+                self.output(out)
+            else:
+                messagebox.showinfo( "No records found","No recent transactions")
+
+    def output(self, out):
+        column = ("Transaction Unique Id","Transaction Id","Date and Time","Item name","Quantity","Paid Amount","Buyer Username","Seller Organisation")
+
+        listBox = ttk.Treeview(self,selectmode="extended",columns=column,show="headings")
+
+        verscrlbar = ttk.Scrollbar(self, orient ="vertical",command = listBox.yview)
+        verscrlbar.grid(row=2,column=2,sticky="nsw",rowspan=2)
+
+        listBox.configure(yscrollcommand = verscrlbar.set)
+
+        for i in range(len(column)):
+            listBox.heading(column[i], text=column[i],command=lambda c=column[i]: self.sortby(listBox, c, 0))
+            listBox.column(column[i], minwidth=0)
+        for col in column:
+            listBox.heading(col, text=col)
+            listBox.column(col, width=tkFont.Font().measure(col.title()))
+        listBox.grid(row=2, column=1,sticky="we")
+
+
+        for i in out:
+            i=list(i)
+            i[3]=self.itemname(i[3])
+            i[6]=self.buyername(i[6])
+            i[7]=self.sellerorg(i[7])
+            i=tuple(i)
+            listBox.insert("", "end", values=i)
+
+            for indx, val in enumerate(i):
+                ilen = tkFont.Font().measure(val)
+                if listBox.column(column[indx], width=None) < ilen:
+                    listBox.column(column[indx], width=ilen)
+
+    def itemname(self,ino):
+        Apptools.defaultqueryrun(self,"items")
+        query="Select iname from items where itemno="+str(ino)+";"
+        out=Apptools.sql_run(self,query)
+        if out and out[0]:
+            return out[0][0][0]
+        else:
+            messagebox.showerror("Data corruption","Transaction log data is corrupted\nContact Admin")
+
+    def sellerorg(self,user):
+        Apptools.defaultqueryrun(self,"logindataseller")
+        query="Select OrgName from logindataseller where username='"+user+"';"
+        out=Apptools.sql_run(self,query)
+        if out and out[0]:
+            return out[0][0][0]
+        else:
+            messagebox.showerror("Data corruption","Transaction log data is corrupted\nContact Admin")
+
+    def buyername(self,user):
+        Apptools.defaultqueryrun(self,"logindatabuyer")
+        query="Select Name from logindatabuyer where username='"+user+"';"
+        out=Apptools.sql_run(self,query)
+        if out and out[0]:
+            return out[0][0][0]
+        else:
+            messagebox.showerror("Data corruption","Transaction log data is corrupted\nContact Admin")
+
+    def sortby(self,tree, col, descending):
+        data = [(tree.set(child, col), child) for child in tree.get_children('')]
+
+        x=True
+
+        for a,b in data:
+            x=x and Apptools.check_digit(self,a)
+        if x:
+            for i in range(len(data)):
+                data[i]=list(data[i])
+                data[i][0]=int(data[i][0])
+        data.sort(reverse=descending)
+
+        for indx, item in enumerate(data):
+            tree.move(item[1], '', indx)
+
+        tree.heading(col,command=lambda col=col: self.sortby(tree, col, int(not descending)))
+
+
 class Page4_BuyerShowProfile(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master, bg="#333333")
@@ -3168,15 +3287,98 @@ class Page4_BuyerRecentlyBrought(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="e")
+        btn.grid(row=0, column=3, sticky="e")
 
         lbl = tk.Label(self, text="Recently Brought")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=1,columnspan=3,padx=30,pady=10)
+        lbl.grid(row=1, column=0,columnspan=4,padx=30,pady=10)
 
-        lbl = tk.Label(self, text="Page Under Construction")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=2, column=2,padx=30,pady=10)
+        self.recentlybrought()
+
+
+    def recentlybrought(self):
+        rec=Apptools.defaultqueryrun(self,"trecord")
+        query="Select * from trecord where BuyerUsername='"+G_USERNAME.get()+"';"
+        out=Apptools.sql_run(self,query)
+
+        if out is not None and rec:
+            out=out[0]
+            if out!=[]:
+                self.output(out)
+            else:
+                messagebox.showinfo( "No records found","No Items Brought Recently\nStart Shopping")
+
+                lbl = tk.Label(self, text="Start Shopping")
+                lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+                lbl.grid(row=2, column=1,padx=30,pady=10)
+
+    def output(self, out):
+        column = ("Transaction Unique Id","Transaction Id","Date and Time","Item name","Quantity","Paid Amount","Buyer Username","Seller Organisation")
+
+        listBox = ttk.Treeview(self,selectmode="extended",columns=column,show="headings")
+
+        verscrlbar = ttk.Scrollbar(self, orient ="vertical",command = listBox.yview)
+        verscrlbar.grid(row=2,column=2,sticky="nsw",rowspan=2)
+
+        listBox.configure(yscrollcommand = verscrlbar.set)
+
+        for i in range(len(column)):
+            listBox.heading(column[i], text=column[i],command=lambda c=column[i]: self.sortby(listBox, c, 0))
+            listBox.column(column[i], minwidth=0)
+        for col in column:
+            listBox.heading(col, text=col)
+            listBox.column(col, width=tkFont.Font().measure(col.title()))
+        listBox.grid(row=2, column=1,sticky="we")
+
+
+        for i in out:
+            i=list(i)
+            i[3]=self.itemname(i[3])
+            i[7]=self.sellerorg(i[7])
+            i=tuple(i)
+            listBox.insert("", "end", values=i)
+
+            for indx, val in enumerate(i):
+                ilen = tkFont.Font().measure(val)
+                if listBox.column(column[indx], width=None) < ilen:
+                    listBox.column(column[indx], width=ilen)
+
+    def itemname(self,ino):
+        Apptools.defaultqueryrun(self,"items")
+        query="Select iname from items where itemno="+str(ino)+";"
+        out=Apptools.sql_run(self,query)
+        if out and out[0]:
+            return out[0][0][0]
+        else:
+            messagebox.showerror("Data corruption","Transaction log data is corrupted\nContact Admin")
+
+    def sellerorg(self,user):
+        Apptools.defaultqueryrun(self,"logindataseller")
+        query="Select OrgName from logindataseller where username='"+user+"';"
+        out=Apptools.sql_run(self,query)
+        if out and out[0]:
+            return out[0][0][0]
+        else:
+            messagebox.showerror("Data corruption","Transaction log data is corrupted\nContact Admin")
+
+
+    def sortby(self,tree, col, descending):
+        data = [(tree.set(child, col), child) for child in tree.get_children('')]
+
+        x=True
+
+        for a,b in data:
+            x=x and Apptools.check_digit(self,a)
+        if x:
+            for i in range(len(data)):
+                data[i]=list(data[i])
+                data[i][0]=int(data[i][0])
+        data.sort(reverse=descending)
+
+        for indx, item in enumerate(data):
+            tree.move(item[1], '', indx)
+
+        tree.heading(col,command=lambda col=col: self.sortby(tree, col, int(not descending)))
 
 class Page4_BuyerDeleteAccount(tk.Frame):
     def __init__(self, master):
@@ -3637,27 +3839,28 @@ class Page6_BuyerProductView(tk.Frame):
         lbl.image = render
         lbl.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0)
         lbl.config(activebackground="#3297E9",font=("Segoe Print", 15))
-        lbl.grid(row =2,column=1,columnspan=2,padx=10,pady=10)
-
-        lbl = tk.Label(self, text="Enter Quantity")
-        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=3, column=1,padx=5,pady=10)
-
-        qty=tk.Entry(self, fg="#E8E8E8", bg="#333333")
-        qty.grid(row=3, column=2)
-        qty.insert(0, 1)
+        lbl.grid(row =2,column=1,columnspan=2,rowspan=2,padx=10,pady=10)
 
         btn=tk.Button(self,text="Add to Cart",command=lambda: self.addtocart(ino,qty.get(),istock))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=4, column=2,pady=10)
+        btn.grid(row=2, column=3,pady=10)
 
         btn=tk.Button(self,text="Add to Wishlist",command=lambda: self.addtowishlist(ino))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=4, column=3,padx=10)
+        btn.grid(row=3, column=3,padx=10)
+
+        lbl = tk.Label(self, text="Enter Quantity")
+        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=4, column=1,padx=5,pady=10)
+
+        qty=tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        qty.grid(row=4, column=2)
+        qty.insert(0, 1)
 
         btn=tk.Button(self,text="Proceed to Pay",command=lambda: self.paypage(master,ino,qty.get(),istock))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=5, column=2,padx=10,pady=10)
+
 
     def addtocart(self,ino,iqty,istock,showMsg=True):
         cond1=Apptools.check_digit(self, iqty)
@@ -3666,9 +3869,29 @@ class Page6_BuyerProductView(tk.Frame):
 
         if cond1 and cond2 and cond3:
             cartuc=Apptools.generateuniquecode(self,"cart","cartuc")
-            rec = Apptools.insertSQL(self,"cart",cartuc,ino,iqty,G_USERNAME.get())
-            if rec is not None and showMsg:
-                messagebox.showinfo("Success!","Added to Cart Successfully!")
+            Apptools.defaultqueryrun(self,"cart")
+            query="Select cartuc,iquantity from cart where itemno="+str(ino)+" and BuyerUsername = '"+G_USERNAME.get()+"';"
+            out=Apptools.sql_run(self,query)
+
+            if out is not None and out[0]!=[]:
+                if out[0][0][1]+int(iqty)<=istock:
+                    query2="Update cart set iquantity=iquantity+"+str(iqty)+" where cartuc='"+out[0][0][0]+"';"
+                    rec0=Apptools.sql_run(self,query2)
+                    if rec0 is not None:
+                        if showMsg:
+                            messagebox.showinfo("Success!","Added to Cart Successfully!")
+                        return True
+                else:
+                    istock-=out[0][0][1]
+                    messagebox.showwarning("Invalid Input!","Enter Valid Input for Quantity 0<>"+str(istock))
+            elif out[0]==[]:
+                rec = Apptools.insertSQL(self,"cart",cartuc,ino,iqty,G_USERNAME.get())
+                if rec is not None:
+                    if showMsg:
+                        messagebox.showinfo("Success!","Added to Cart Successfully!")
+                    return True
+        elif istock==0:
+            messagebox.showwarning("Out of Stock","Item is out of stock check your cart if you have pre-booked that.")
         else:
             messagebox.showwarning("Invalid Input!","Enter Valid Input for Quantity 0<>"+str(istock))
 
@@ -3680,8 +3903,9 @@ class Page6_BuyerProductView(tk.Frame):
             messagebox.showinfo("Success!","Added to Wish List Successfully!")
 
     def paypage(self,master,ino,qty,istock):
-        self.addtocart(ino,qty,istock,showMsg=False)
-        master.switch_frame(Page7_BuyerPaymentProceed)
+        cond=self.addtocart(ino,qty,istock,showMsg=False)
+        if cond:
+            master.switch_frame(Page7_BuyerPaymentProceed)
 
 class Page7_BuyerPaymentProceed(tk.Frame):
     def __init__(self, master):
@@ -3742,7 +3966,7 @@ class Page7_BuyerPaymentProceed(tk.Frame):
                 lbl.config(activebackground="#3297E9",font=("Segoe Print", 15))
                 lbl.grid(row =r,column=0,padx=10,pady=10,sticky="ew")
 
-                btn=tk.Button(frame.scrollable_frame,text="Remove Item",command=lambda x=ino: self.deleteitemcart(master,ino))
+                btn=tk.Button(frame.scrollable_frame,text="Remove Item",command=lambda x=ino: self.deleteitemcart(master,x))
                 btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
                 btn.grid(row=r, column=1)
                 r+=1
@@ -3753,27 +3977,33 @@ class Page7_BuyerPaymentProceed(tk.Frame):
             lbl.config(font=("Segoe Print", 30), fg="#E8E8E8", bg="#333333")
             lbl.grid(row=0, column=2,columnspan=4,padx=100,pady=100)
 
-        frame.grid(row=4,column=0,columnspan=2)
+        frame.grid(row=4,column=0,columnspan=2,sticky="nw")
 
         userd=self.userdata()
+        netb=0
         if userd is not None:
             lbl = tk.Label(self, text="Deliever to\n"+userd[0]+"\n"+userd[1])
             lbl.config(font=("Segoe Print", 20), fg="#E8E8E8", bg="#333333")
-            lbl.grid(row=3, column=2,rowspan=2,padx=10,pady=10,sticky="ns")
+            lbl.grid(row=3, column=2,padx=10,pady=10,rowspan=2,sticky="ns")
 
-            if userd[2]=='Y':
-                btn=tk.Button(self,text="Bargain",command=lambda: self.bargain(out))
-                btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-                btn.grid(row=0, column=4, sticky="e")
+            netb=self.bargain(out,userd[2])
+            lbl1 = tk.Label(self, text="Net Bargain : ₹"+str(netb))
+            lbl1.config(font=("Segoe Print", 20), fg="#E8E8E8", bg="#333333")
+            lbl1.grid(row=7, column=0,columnspan=2,padx=10,pady=10,sticky="ns")
+
+            lbl = tk.Label(self, text="Amount to be Paid : ₹"+str(totalprice-netb)+"+₹5 (PG Charges)")
+            lbl.config(font=("Segoe Print", 20), fg="#E8E8E8", bg="#333333")
+            lbl.grid(row=8, column=0,columnspan=3,padx=10,pady=10,sticky="ns")
 
 
-        lbl = tk.Label(self, text="Amount to be Paid : "+str(totalprice))
+        lbl = tk.Label(self, text="Total Price : ₹"+str(totalprice))
         lbl.config(font=("Segoe Print", 20), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=5, column=0,columnspan=2,padx=10,pady=10,sticky="ns")
+        lbl.grid(row=6, column=0,columnspan=2,padx=10,pady=10,sticky="ns")
 
-        btn=tk.Button(self,text="Proceed to Pay",command=lambda: self.payportal())
-        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="e")
+        price=totalprice-netb
+        btn=tk.Button(self,text="Proceed to Pay",command=lambda: self.payportal(master,out,price))
+        btn.config(bg="#1F8EE7",padx=7,pady=4,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=6, column=2,rowspan=3)
 
 
 
@@ -3813,14 +4043,145 @@ class Page7_BuyerPaymentProceed(tk.Frame):
             if out[0]:
                 return out[0][0]
 
-    def bargain(self):
-        pass
+    def deleteitemcart(self,master,ino):
+        query="delete from cart where itemno="+str(ino)+" and BuyerUsername='"+G_USERNAME.get()+"';"
+        rec=Apptools.sql_run(self,query)
+        if rec is not None:
+            messagebox.showinfo("Success","Item Deleted Successfully")
+            master.switch_frame(Page7_BuyerPaymentProceed)
 
-    def payportal(self):
-        pass
-        #remove stock
-        #empty cart
-        #check and deduct money
+    def bargain(self,out,ispremium):
+        netbargain=0
+
+        if out!=[] and ispremium.upper()=='Y':
+            for ino,iname,iwp,irp,idesc,icat,istock,imgdir,selluser,iqty in out:
+                r=(irp/iwp)*100
+                if r<=120:
+                    netbargain+= 0
+                else:
+                    netbargain+= max(0,iqty*(irp-(iwp*120/100)))
+                    # Ensuring at least 20% Profit(approx) for seller and admin combined
+        return round(netbargain,2)
+
+    def payportal(self,master,out,price):
+
+        if out!=[]:
+            for ino,iname,iwp,irp,idesc,icat,istock,imgdir,selluser,iqty in out:
+                if istock>=iqty:
+                    self.paymentpage(master,price,out)
+
+                else:
+                    txtmsg="Only a Few stocks are left as item is getting out of stock."
+                    txtmsg+="\nStocks available for "+iname+" is "+istock
+                    txtmsg+="\nCan't Buy this item. :-(\nTry Checking with fewer stocks"
+
+                    messagebox.showwarning("Item is out of Stock",txtmsg)
+
+        else:
+            messagebox.showwarning("Empty Cart","Your Cart is Empty Start Shopping Now.")
+
+    def paymentpage(self,master,price,out):
+        screen = tk.Toplevel(self, bg="#333333")
+        screen.iconphoto(False, Icon)
+        screen.title("Payment Portal @Kans")
+        screen.resizable(0, 0)
+
+        lbl = tk.Label(screen, text="Payment Portal")
+        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=0, column=1,columnspan=3,padx=30,pady=10)
+
+        lbl = tk.Label(screen, text="Total Transaction Amount : ₹"+str(price)+"+₹5 (PG Charges)")
+        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=1, column=1,padx=20,pady=10)
+
+        lbl = tk.Label(screen, text="Enter PIN")
+        lbl.config(font=("Chiller", 15), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=2, column=1,padx=20,pady=10)
+
+        pin=tk.Entry(screen, fg="#E8E8E8", bg="#333333",show="*")
+        pin.grid(row=2, column=2)
+
+        btn=tk.Button(screen,text="Proceed")
+        btn.config(command=lambda: self.checktrans(master,pin.get(),price,out))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=3, column=3,pady=10)
+
+    def checktrans(self,master,pin,price,out):
+        if pin==G_PIN.get():
+
+            walno=self.walnofind("logindatabuyer",G_USERNAME.get())
+            amt=Apptools.checkBalance(self,walno,pin)
+            c=[]
+            if amt>=price+5:
+                txt="Transaction Amount : "+str(price+5)+"\nIncluding PG Charges\nBalance after deduction : "+str(amt-(price+5))+"\nAre you sure want to proceed?"
+                choice = messagebox.askyesno("Transaction Confirmation",txt)
+                if choice:
+                    query="Update walletbank set Amt =Amt-"+str(price+5)+" where walno='"+walno+"' and pin="+str(pin)+";"
+                    rec=Apptools.sql_run(self,query)
+                    if rec is not None:
+                        tid=Apptools.generateuniquecode(self,"trecord","tid")
+                        for i in range(len(out)):
+                            ino=out[i][0]
+                            iwp=out[i][2]
+                            irp=out[i][3]
+                            iqty=out[i][9]
+                            selleruser=out[i][8]
+                            selwalno=self.walnofind("logindataseller",selleruser)
+
+                            r=(irp/iwp)*100
+                            if r<=120:
+                                netbargain= 0
+                            else:
+                                netbargain= max(0,iqty*(irp-(iwp*120/100)))
+
+                            query2="Update walletbank set Amt =Amt+"+str((irp-netbargain)*0.95)+" where walno='"+selwalno+"';"
+                            query3="delete from cart where itemno="+str(ino)+" and BuyerUsername='"+G_USERNAME.get()+"';"
+                            query4="Update items set istock=istock-"+str(iqty)+" where itemno="+str(ino)+";"
+
+                            rec2=Apptools.sql_run(self,query2,query3,query4)
+
+                            tuid=Apptools.generateuniquecode(self,"trecord","tuid")
+                            tdate=self.timeformat()
+                            rec4=Apptools.insertSQL(self,"trecord",tuid,tid,tdate,ino,iqty,(irp-netbargain),G_USERNAME.get(),selleruser)
+
+                            if rec2 is not None and rec4 is not None:
+                                c+=rec2+rec4
+                            else:
+                                messagebox.showerror("Transaction Failed!","Ask Admin for refund")
+                                c=None
+                                break
+                        admwalno=self.walnofind("logindataadmin",SUPERADMIN)
+                        query5="Update walletbank set Amt =Amt+"+str(5+((price)*0.05))+" where walno='"+admwalno+"';"
+                        rec3=Apptools.sql_run(self,query5)
+                        if rec3 is not None:
+                            c+=rec3
+                        else:
+                            messagebox.showerror("Transaction Failed!","Contact Admin for details")
+                            c=None
+
+                        if c is not None:
+                            messagebox.showinfo("Success!","Transaction completed successfully!")
+                            master.switch_frame(Page3_BuyerShoppe)
+
+            else:
+                messagebox.showwarning("Insufficient fund","There is insufficient fund in your wallet.\nTry Recharging Your Wallet")
+
+        else:
+            messagebox.showwarning("Invalid PIN","Invalid PIN\nTry entering correct PIN")
+
+    def walnofind(self,table,username):
+        query="select walno from "+table+" where username='"+username+"';"
+        out=Apptools.sql_run(self, query)
+        if out is not None:
+            if out[0]!=[]:
+                walno=out[0][0][0]
+                return walno
+
+    def timeformat(self):
+        now = datetime.now()
+        formatted_date = now.strftime('%Y-%m-%d %H:%M:%S')
+        return formatted_date
+
 
 
 class Page4_BuyerWishlist(tk.Frame):
@@ -3836,26 +4197,56 @@ class Page4_BuyerWishlist(tk.Frame):
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=4, sticky="e")
 
-        lbl = tk.Label(self, text="Delete Account")
+        lbl = tk.Label(self, text="Wishlist")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=2,padx=30,pady=10)
 
-class Page4_BuyerCart(tk.Frame):
-    def __init__(self, master):
-        tk.Frame.__init__(self, master, bg="#333333")
-        self.makeWidgets(master)
-    def makeWidgets(self, master):
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_BuyerShoppe))
-        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=0, sticky="w")
+        frame = ScrollableFrame(self,cw=550,ch=300)
 
-        btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
-        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="e")
+        out=[]
+        if out!=[]:
+            r=0
+            for ino,iname,iwp,irp,idesc,icat,istock,imgdir,selluser,iqty in out:
 
-        lbl = tk.Label(self, text="Delete Account")
-        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+                orgname=self.sellerorgname(selluser)
+
+                txt="Item name : "+iname.title()+"\n"+"Seller : "+orgname
+                txt+="\nDescription : "+idesc.title()+"\nCategory : "+icat.title()
+                txt+="\nPrice : ₹"+str(irp)+"\nQuantity : "+str(iqty)
+
+                try:
+                    Photo = Image.open(imgdir)
+                    Photo = Photo.resize((200, 200))
+                    render = ImageTk.PhotoImage(Photo)
+
+                except Exception as e:
+                    print(e)
+
+                    Photo = Image.open("Additem.png")
+                    Photo = Photo.resize((200, 200))
+                    render = ImageTk.PhotoImage(Photo)
+
+                lbl = tk.Label(frame.scrollable_frame,text=txt ,image=render,compound =tk.LEFT)
+                lbl.image = render
+                lbl.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0)
+                lbl.config(activebackground="#3297E9",font=("Segoe Print", 15))
+                lbl.grid(row =r,column=0,padx=10,pady=10,sticky="ew")
+
+                btn=tk.Button(frame.scrollable_frame,text="Remove Item",command=lambda x=ino: self.deleteitemcart(master,x))
+                btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+                btn.grid(row=r, column=1)
+
+                btn=tk.Button(frame.scrollable_frame,text="Add to Cart",command=lambda x=ino: self.deleteitemcart(master,x))
+                btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+                btn.grid(row=r, column=1)
+                r+=1
+
+        else:
+            lbl = tk.Label(frame.scrollable_frame, text="No Items Found :-(")
+            lbl.config(font=("Segoe Print", 30), fg="#E8E8E8", bg="#333333")
+            lbl.grid(row=0, column=2,columnspan=4,padx=100,pady=100)
+
+        frame.grid(row=4,column=0,columnspan=2,sticky="nw")
 
 
 # Main Program
