@@ -77,7 +77,11 @@ class Apptools:
             cursor.close()
             return output[2:]
         except (mysqlcon.Error, mysqlcon.Warning) as error:
-            messagebox.showwarning("Error", error)
+            if error.errno==2003:
+                ermsg="Failed to make a connection to the server."
+                messagebox.showerror(ermsg, "You are Offline!\n"+ermsg+"\nError Code : 2003")
+            else:
+                messagebox.showerror("Error", error)
         finally:
             if sql_connection:
                 sql_connection.close()
@@ -431,18 +435,20 @@ class Apptools:
     def clearImgCache(self):
         Apptools.defaultqueryrun(self,"items")
         query="Select imgdir from items;"
-        out=Apptools.sql_run(self,query)[0]
-        for i in range(len(out)):
-            out[i]=out[i][0]
+        out=Apptools.sql_run(self,query)
+        if out is not None:
+            out=out[0]
+            for i in range(len(out)):
+                out[i]=out[i][0]
 
-        onlyfiles = [savedir+f for f in os.listdir(savedir) if os.path.isfile(os.path.join(savedir, f))]
-        dup=list(onlyfiles)
-        for l in dup:
-            if l in out:
-                onlyfiles.remove(l)
-        for l in onlyfiles:
-            if os.path.exists(l):
-                os.remove(l)
+            onlyfiles = [savedir+f for f in os.listdir(savedir) if os.path.isfile(os.path.join(savedir, f))]
+            dup=list(onlyfiles)
+            for l in dup:
+                if l in out:
+                    onlyfiles.remove(l)
+            for l in onlyfiles:
+                if os.path.exists(l):
+                    os.remove(l)
 
     def logout(self, master):
         G_NAME.set("")
@@ -455,6 +461,14 @@ class App(tk.Tk):
     def __init__(self):
         tk.Tk.__init__(self)
         self._frame = None
+        
+        global G_NAME
+        G_NAME = StringVar()
+        global G_PIN
+        G_PIN = StringVar()
+        global G_USERNAME
+        G_USERNAME = StringVar()
+        
         self.switch_frame(Homepage)
 
     def switch_frame(self, frame_class):
@@ -468,12 +482,6 @@ class Homepage(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master, bg="#333333")
         self.makeWidgets(master)
-        global G_NAME
-        G_NAME = StringVar()
-        global G_PIN
-        G_PIN = StringVar()
-        global G_USERNAME
-        G_USERNAME = StringVar()
 
     def makeWidgets(self, master):
         Apptools.image_Show(self, "logo.png", 0, 0, 300, 450,rspan=10)
@@ -1866,7 +1874,7 @@ class Page4_AdminCashout(tk.Frame):
                             else:
                                 messagebox.showwarning("Invalid Credentials","Either Username/type or withdrawl amount is incorrect.")
                         else:
-                            messagebox.showwarning("Invalid Key","Key is not found in your servers\nMaybe already used or invalid")
+                            messagebox.showwarning("Invalid Key","Key is not found in our servers\nMaybe already used or invalid")
                 else:
                     messagebox.showerror("No such user exists!","Try entering correct username/details")
         else:
@@ -3329,6 +3337,36 @@ class Page4_BuyerWalletRecharge(tk.Frame):
         lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=30,pady=10)
 
+class ScrollableFrame(ttk.Frame):
+    def __init__(self, container, *args, **kwargs):
+        super().__init__(container, *args, **kwargs)
+        canvas = tk.Canvas(self,bg="#333333")
+        canvas.config(scrollregion=(0,0,900,1000))
+        vscrollbar = ttk.Scrollbar(self, orient="vertical", command=canvas.yview)
+        hscrollbar = ttk.Scrollbar(self, orient="horizontal", command=canvas.xview)
+
+
+        s = ttk.Style()
+        s.configure('TFrame', background='#333333')
+
+        self.scrollable_frame = ttk.Frame(canvas)
+
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(
+                scrollregion=canvas.bbox("all")
+            )
+        )
+        canvas.create_window((0, 0), window=self.scrollable_frame,anchor="nw")
+        self._canvasWidth=775
+        self._canvasHeight=500
+        canvas.config(width=self._canvasWidth,height=self._canvasHeight,scrollregion=(0,0, self._canvasWidth, self._canvasHeight))
+        canvas.configure(yscrollcommand=vscrollbar.set,xscrollcommand=hscrollbar.set)
+
+        canvas.grid(row=0,column=0)
+        vscrollbar.grid(row=0,column=10,rowspan=10,sticky='nse')
+        hscrollbar.grid(row=21,column=0,columnspan=10,sticky='wse')
+
 
 class Page4_BuyerShopping(tk.Frame):
     def __init__(self, master):
@@ -3337,58 +3375,44 @@ class Page4_BuyerShopping(tk.Frame):
 
     def makeWidgets(self, master):
 
-        canvas = tk.Canvas(self, bg="#333333")
-        scrollbar = ttk.Scrollbar(self, orient="vertical", command=canvas.yview)
-        scrollable_frame = ttk.Frame(canvas)
-
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(
-                scrollregion=canvas.bbox("all")
-            )
-        )
-
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-
-        canvas.configure(yscrollcommand=scrollbar.set)
-        canvas.configure(width=500,height=500)
-
-        canvas.grid(row=0,column=0)
-        scrollbar.grid(row=0,column=5)
-        scrollable_frame.grid(row=0,column=5)
-
-
-        self=scrollable_frame
-
-        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_BuyerShoppe))
+        frame = ScrollableFrame(self)
+        
+        btn=tk.Button(frame.scrollable_frame,text="Go Back",command=lambda: master.switch_frame(Page3_BuyerShoppe))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
-        btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
+        btn=tk.Button(frame.scrollable_frame,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=4, sticky="e")
 
-        lbl = tk.Label(self, text="Kans\nStart Shopping")
+        lbl = tk.Label(frame.scrollable_frame, text="Kans\nStart Shopping")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=1,pady=10,columnspan=2)
+        lbl.grid(row=1, column=1,pady=10,columnspan=3)
 
-        Apptools.image_Show(self, "Lighthouse.jpg", 2, 0, 700, 110,cspan=5)
+        Apptools.image_Show(frame.scrollable_frame, "Lighthouse.jpg", 2, 0, 700, 110,cspan=5)
 
         Dir=["Img1.jpg","Img2.png","Img3.jpg","Img4.jpg","Img5.png","Img6.png"]
         Dir+=["Img7.jpg","Img8.png","Img9.jpg","Img10.png","Img11.png","Img12.png"]
         r,c=3,1
         for i in range(len(Dir)):
-            imgbtn=Apptools.imageButton(self,"CardsShop//"+Dir[i],125,75,r,c)
-            imgbtn.config(command=lambda: master.switch_frame(Page3_BuyerShoppe))
+            Apptools.imageButton(frame.scrollable_frame,"CardsShop//"+Dir[i],200,120,r,c)
+            imgbtn.config(command=lambda: self.framechange(master,i))
             if c==3:
                 r+=1
                 c=1
             else:
                 c+=1
 
+        frame.grid(row=10,column=1)
 
-
-
+    def framechange(self,master,Img):
+        print(Img)
+        if Img.startswith("Img") and( Img.endswith(".png") or Img.endswith(".jpg")):
+            Img=Img[3:Img.find('.')]
+            ChoosedCategory=Img
+            print(ChoosedCategory)
+            master.switch_frame(Page3_BuyerShoppe)
+        
 
 
 
