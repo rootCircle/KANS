@@ -3610,7 +3610,7 @@ class Page4_BuyerShopping(tk.Frame):
         Apptools.image_Show(frame.scrollable_frame, "Lighthouse.jpg", 2, 0, 700, 110,cspan=5)
 
         Dir=["Img1.jpg","Img2.png","Img3.jpg","Img4.jpg","Img5.png","Img6.png"]
-        Dir+=["Img7.jpg","Img8.png","Img9.jpg","Img10.png","Img11.png","Img12.png"]
+        Dir+=["Img7.jpg","Img8.png","Img9.jpg"]
         r,c=3,1
         for i in range(len(Dir)):
             diry="CardsShop//"+Dir[i]
