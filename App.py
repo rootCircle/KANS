@@ -6,20 +6,23 @@ Requirements:
     local image files
 @author: compaq
 """
-
 try:
-    import tkinter as tk
-except ImportError:
-    import Tkinter as tk
-from tkinter import messagebox,Radiobutton,PhotoImage,StringVar,filedialog,ttk,simpledialog
-import tkinter.font as tkFont
-import mysql.connector as mysqlcon
-from PIL import Image, ImageTk
-import random
-import os
-import errno
-from datetime import datetime
-
+    try:
+        import tkinter as tk
+    except ImportError:
+        import Tkinter as tk
+    from tkinter import messagebox,Radiobutton,PhotoImage,StringVar,filedialog,ttk,simpledialog
+    import tkinter.font as tkFont
+    import mysql.connector as mysqlcon
+    from PIL import Image, ImageTk
+    import random
+    import os
+    import errno
+    from datetime import datetime
+except Exception as e:
+    print("Import Error",e,sep='\n')
+    print("Part/Complete of Program may malfunction severely.")
+    print("Strongly Recommended to install module before starting")
 
 """
 Database and File saving Directories
