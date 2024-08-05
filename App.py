@@ -20,9 +20,12 @@ try:
     import errno
     from datetime import datetime
 except Exception as e:
+
     print("Import Error",e,sep='\n')
     print("Part/Complete of Program may malfunction severely.")
     print("Strongly Recommended to install module before starting")
+    import sys
+    sys.exit()
 
 """
 Database and File saving Directories
@@ -106,7 +109,7 @@ class Apptools:
                     query=l
                     val=()
                 cursor.execute(query,val)
-                if query.upper().startswith(("SELECT","DESC")):
+                if query.upper().startswith(("SELECT","DESC","SHOW")):
                     output.append(cursor.fetchall())
                 else:
                     sql_connection.commit()
@@ -123,11 +126,13 @@ class Apptools:
                 ermsg="Failed to make a connection to the server."
                 messagebox.showerror(ermsg, "Invalid Credential for Database\nRequires Database Configuration.")
                 user=simpledialog.askstring("Input","Enter Database Username",parent=self)
-                pswd=simpledialog.askstring("Input","Enter Database Password",parent=self)
-                if user is not None and pswd is not None:
-                    globals()['USERNAME']=user
-                    globals()['PASSWORD']=pswd
-                    messagebox.showinfo("Success","Retry to see if credentials are correct or not.")
+
+                if user is not None:
+                    pswd=simpledialog.askstring("Input","Enter Database Password",parent=self)
+                    if pswd is not None:
+                        globals()['USERNAME']=user
+                        globals()['PASSWORD']=pswd
+                        messagebox.showinfo("Success","Retry to see if credentials are correct or not.")
             elif error.errno==2005:
                 ermsg="Failed to make a connection to the server."
                 messagebox.showerror(ermsg, "Invalid Credential for Database\nRequires Database Configuration.")
@@ -732,7 +737,7 @@ class Page2_SignupAdmin(tk.Frame):
 
     def makeWidgets(self, master):
         frame = ScrollableFrame(self,ch=600,cw=585)
-        
+
         Apptools.image_Show(frame.scrollable_frame, SIGNUPPAGEImgDir[0], 0, 0, 100, 650,rspan=15)
 
         Apptools.image_Show(frame.scrollable_frame, SIGNUPPAGEImgDir[1], 0, 4, 100, 650,rspan=15)
@@ -872,7 +877,7 @@ class Page2_SignupBuyer(tk.Frame):
 
     def makeWidgets(self, master):
         frame = ScrollableFrame(self,ch=600,cw=585)
-        
+
         Apptools.image_Show(frame.scrollable_frame, SIGNUPPAGEImgDir[0], 0, 0, 100, 650,rspan=16)
 
         Apptools.image_Show(frame.scrollable_frame, SIGNUPPAGEImgDir[1], 0, 4, 100, 650,rspan=16)
@@ -1024,7 +1029,7 @@ class Page2_SignupSeller(tk.Frame):
     def makeWidgets(self, master):
 
         frame = ScrollableFrame(self,ch=600,cw=585)
-        
+
         Apptools.image_Show(frame.scrollable_frame, SIGNUPPAGEImgDir[0], 0, 0, 100, 650,rspan=17)
 
         Apptools.image_Show(frame.scrollable_frame, SIGNUPPAGEImgDir[1], 0, 4, 100, 650,rspan=17)
@@ -1573,25 +1578,34 @@ class Page3_BuyerPremium(tk.Frame):
         return False
 
     def getmembership(self,master):
-        rec=Apptools.defaultqueryrun(self, "logindatabuyer")
         query_2 = "Select WalNo from logindatabuyer where username=%s;"
         query_3 = "Update logindatabuyer set isPremium='Y' where username = %s;"
+        SUPERADMIN=self.findsuperadmin()
+        if SUPERADMIN is not None:
+            query="Update walletbank set Amt =Amt-%s where walno=%s and pin=%s;"
+            rec=Apptools.sql_run(self,[query,(price+5,walno,pin)])
+            if rec is not None:
+                rec=Apptools.defaultqueryrun(self, "logindatabuyer")
+                if rec:
+                    Walno=Apptools.sql_run(self, [query_2,(G_USERNAME.get(),)])[0][0][0]
+                    out = Apptools.checkBalance(self,Walno,G_PIN.get())
+                    if out is not None and out>=100:
+                        query_4 = "Update walletbank set amt=amt-100 where WalNo=%s;"
+                        rec2=Apptools.sql_run(self, [query_4,(Walno,)])
+                        if rec2:
+                            rec3=Apptools.sql_run(self, [query_3,(G_USERNAME.get(),)])
+                            if rec3 is not None:
+                                messagebox.showinfo("You are now a premium member","Get exclusive discount and benefits.\nStart Shooping")
+                                master.switch_frame(Page3_DashboardBuyer)
+                    elif out is not None and out<100:
+                        messagebox.showwarning("Insufficient fund in wallet","Please recharge your wallet to continue.")
 
-        if rec:
-            Walno=Apptools.sql_run(self, [query_2,(G_USERNAME.get(),)])[0][0][0]
-            out = Apptools.checkBalance(self,Walno,G_PIN.get())
-            if out is not None and out>=100:
-                query_4 = "Update walletbank set amt=amt-100 where WalNo=%s;"
-                rec2=Apptools.sql_run(self, [query_4,(Walno,)])
-                if rec2:
-                    rec3=Apptools.sql_run(self, [query_3,(G_USERNAME.get(),)])
-                    if rec3 is not None:
-                        messagebox.showinfo("You are now a premium member","Get exclusive discount and benefits.\nStart Shooping")
-                        master.switch_frame(Page3_DashboardBuyer)
-            elif out is not None and out<100:
-                messagebox.showwarning("Insufficient fund in wallet","Please recharge your wallet to continue.")
-
-
+    def findsuperadmin(self):
+        Apptools.defaultqueryrun(self,"logindataadmin")
+        query="Select Username from logindataadmin ORDER by id;"
+        out=Apptools.sql_run(self,query)
+        if out and out[0]:
+            return out[0][0][0]
 
 
 class Page3_BuyerShoppe(tk.Frame):
@@ -2742,7 +2756,7 @@ class Page4_SellerModifyItems(tk.Frame):
         tk.Frame.__init__(self, master, bg="#333333")
         self.makeWidgets(master)
     def makeWidgets(self, master):
-        
+
         btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_SellerItemManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
@@ -2772,9 +2786,8 @@ class Page4_SellerModifyItems(tk.Frame):
         lbl.grid(row=6, column=1,columnspan=3,padx=5,pady=10)
 
     def modify(self,master,itemno):
-        sep = ttk.Separator(self,orient='horizontal')
-        sep.grid(row=4,column=0,columnspan=5,sticky="ews")
-        
+
+
         frame = ScrollableFrame(self,ch=350,cw=385)
         sframe=frame.scrollable_frame
         cond1=Apptools.check_digit(self,itemno)
@@ -2787,6 +2800,8 @@ class Page4_SellerModifyItems(tk.Frame):
             if out and rec:
                 data = out[0]
                 if data!=[]:
+                    sep = ttk.Separator(self,orient='horizontal')
+                    sep.grid(row=4,column=0,columnspan=5,sticky="ews")
                     data=data[0]
                     Entry_Obj=[]
                     Fieldname=["Item Name","Wholesale Price","Retail Price","Description"]
@@ -2834,13 +2849,15 @@ class Page4_SellerModifyItems(tk.Frame):
                     btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
                     btn.grid(row=6, column=3,pady=10)
 
+                    frame.grid(row=5,column=0,columnspan=5)
+
                 else:
                     messagebox.showwarning("Invalid Item Code","Item Code is incorrect")
                     master.switch_frame(Page3_SellerItemManagement)
         else:
             messagebox.showwarning("Invalid Field","Fill all the forms correctly to continue")
 
-        frame.grid(row=5,column=0,columnspan=5)
+
 
 
 
@@ -3198,7 +3215,7 @@ class Page4_SellerRecentTransactions(tk.Frame):
 
         frame = ScrollableFrame(self,ch=300,cw=585)
         sframe=frame.scrollable_frame
-        
+
         btn=tk.Button(sframe,text="Go Back",command=lambda: master.switch_frame(Page3_SellerItemManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
@@ -3414,7 +3431,7 @@ class Page4_BuyerRecentlyBrought(tk.Frame):
     def makeWidgets(self, master):
 
         frame = ScrollableFrame(self,ch=300,cw=585)
-        
+
         btn=tk.Button(frame.scrollable_frame,text="Go Back",command=lambda: master.switch_frame(Page3_BuyerProfileManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
@@ -4110,7 +4127,7 @@ class Page7_BuyerPaymentProceed(tk.Frame):
     def makeWidgets(self, master):
         sframe = ScrollableFrame(self,cw=750,ch=600)
 
-        
+
         btn=tk.Button(sframe.scrollable_frame,text="Buyer's Home",command=lambda: master.switch_frame(Page3_BuyerShoppe))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
@@ -4301,11 +4318,11 @@ class Page7_BuyerPaymentProceed(tk.Frame):
         pin.grid(row=2, column=2)
 
         btn=tk.Button(screen,text="Proceed")
-        btn.config(command=lambda: self.checktrans(master,pin.get(),price,out))
+        btn.config(command=lambda: self.checktrans(master,pin.get(),price,out,sframe))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=3, column=3,pady=10)
 
-    def checktrans(self,master,pin,price,out):
+    def checktrans(self,master,pin,price,out,sframe):
         if pin==G_PIN.get():
 
             walno=self.walnofind("logindatabuyer",G_USERNAME.get())
@@ -4408,10 +4425,10 @@ class Page7_BuyerPaymentProceed(tk.Frame):
 
     def findsuperadmin(self):
         Apptools.defaultqueryrun(self,"logindataadmin")
-        query="Select id,Username from logindataadmin;"
+        query="Select Username from logindataadmin ORDER by id;"
         out=Apptools.sql_run(self,query)
         if out and out[0]:
-            return out[0][0][1]
+            return out[0][0][0]
 
 
 
