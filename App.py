@@ -3,6 +3,7 @@
 Created on Tue Jan 12 18:17:14 2021
 Requirements:
     PIL library,mysql.connector,SQL DATABASE WITH localhost,user=root,password=password
+    local image files
 Releases: Recently Brought,Transactions
 @author: compaq
 """
@@ -26,6 +27,8 @@ DATABASE="Kans"
 savedir="C:\\Kans\\App\\ItemImage\\"
 
 savlocimgbtn=""
+itemtype=-1
+chooseditemdetails=[]
 
 
 class Apptools:
@@ -86,15 +89,18 @@ class Apptools:
             if sql_connection:
                 sql_connection.close()
 
-    def image_Show(self, Dir, xrow, ycolumn, width, height,mode="grid",rspan=1,cspan=1):
-
-        Photo = Image.open(Dir)
+    def image_Show(self, Dir, xrow, ycolumn, width, height,mode="grid",rspan=1,cspan=1,px=0,py=0):
+        try:
+            Photo = Image.open(Dir)
+        except Exception as e:
+            print(e)
+            Photo = Image.open("Additem.jpg")
         Photo = Photo.resize((width, height))
         render = ImageTk.PhotoImage(Photo)
         img = tk.Label(self, image=render)
         img.image = render
         if mode=='grid':
-            img.grid(row=xrow, column=ycolumn,rowspan=rspan,columnspan=cspan)
+            img.grid(row=xrow, column=ycolumn,rowspan=rspan,columnspan=cspan,padx=px,pady=py)
         else:
             img.place(x=xrow,y=ycolumn,relx=0,rely=0)
 
@@ -110,7 +116,7 @@ class Apptools:
         if filename:
             try:
                 img = Image.open(filename)
-                img = img.resize((100, 100), Image.ANTIALIAS)
+                img = img.resize((300, 300), Image.ANTIALIAS)
 
                 revfn = Apptools.rev(self,filename)
                 extension=Apptools.rev(self,revfn[:revfn.find(".")+1])
@@ -129,6 +135,7 @@ class Apptools:
                     save_location=xdiry[:save_location.find(".")]+extension
 
                 img.save(save_location)
+                img = img.resize((100, 100))
                 render = ImageTk.PhotoImage(img)
                 imgbtn.config(image=render)
                 imgbtn.image = render
@@ -161,19 +168,6 @@ class Apptools:
         except Exception as e:
             print(e)
             Apptools.imgsavebtn(self,"Additem.png",width,height,irow,icolumn)
-
-    def imageButton(self,diry,width,height,irow,icolumn):
-        try:
-            Photo = Image.open(diry)
-            Photo = Photo.resize((width, height))
-            render = ImageTk.PhotoImage(Photo)
-            global imgbtn
-
-            imgbtn = tk.Button(self, image=render)
-            imgbtn.image = render
-            imgbtn.grid(row = irow,column=icolumn,padx=10,pady=10)
-        except Exception as e:
-            print(e)
 
     def defaultqueryrun(self,table):
         table=table.lower()
@@ -245,6 +239,28 @@ class Apptools:
             imgdir varchar(255) NOT NULL,
             SellerUsername varchar(32) NOT NULL);
             """
+        elif table=="cart":
+            def_query="""Create table IF NOT EXISTS cart(
+            cartuc varchar(8) PRIMARY KEY,
+            itemno int,
+            iquantity int NOT NULL,
+            BuyerUsername varchar(32) NOT NULL);"""
+
+        elif table=="wishlist":
+            def_query="""Create table IF NOT EXISTS wishlist(
+            wishlistuc varchar(8) PRIMARY KEY,
+            itemno int,
+            BuyerUsername varchar(32) NOT NULL);"""
+
+        elif table=="trecord":
+            def_query="""Create table IF NOT EXISTS trecord(
+            tuid int PRIMARY KEY,
+            tid int PRIMARY KEY,
+            tdate datetime NOT NULL,
+            tqty int NOT NULL,
+            titemno int NOT NULL,
+            tpaidamt int NOT NULL,
+            BuyerUsername varchar(32) NOT NULL);"""
         else:
             def_query=None
         rec=None
@@ -330,10 +346,10 @@ class Apptools:
                 txt+=chr(n-5)
         return txt
 
-    def generatewalletno(self):
-        rec=Apptools.defaultqueryrun(self,"walletbank")
+    def generateuniquecode(self,table,idty):
+        rec=Apptools.defaultqueryrun(self,table)
         if rec:
-            query = "select WalNo from walletbank;"
+            query = "select {0} from {1};".format(idty,table)
             out=Apptools.sql_run(self, query)
             if out:
                 list_wal = []
@@ -461,14 +477,14 @@ class App(tk.Tk):
     def __init__(self):
         tk.Tk.__init__(self)
         self._frame = None
-        
+
         global G_NAME
         G_NAME = StringVar()
         global G_PIN
         G_PIN = StringVar()
         global G_USERNAME
         G_USERNAME = StringVar()
-        
+
         self.switch_frame(Homepage)
 
     def switch_frame(self, frame_class):
@@ -477,6 +493,36 @@ class App(tk.Tk):
             self._frame.destroy()
         self._frame = new_frame
         self._frame.pack()
+
+class ScrollableFrame(ttk.Frame):
+    def __init__(self, container,cw=775,ch=500,*args, **kwargs):
+        super().__init__(container, *args, **kwargs)
+        canvas = tk.Canvas(self,bg="#333333",highlightthickness = 0)
+        canvas.config(scrollregion=(0,0,900,1000))
+        vscrollbar = ttk.Scrollbar(self, orient="vertical", command=canvas.yview)
+        hscrollbar = ttk.Scrollbar(self, orient="horizontal", command=canvas.xview)
+
+
+        s = ttk.Style()
+        s.configure('TFrame', background='#333333')
+
+        self.scrollable_frame = ttk.Frame(canvas)
+
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(
+                scrollregion=canvas.bbox("all")
+            )
+        )
+        canvas.create_window((0, 0), window=self.scrollable_frame,anchor="nw")
+        self._canvasWidth=cw
+        self._canvasHeight=ch
+        canvas.config(width=self._canvasWidth,height=self._canvasHeight,scrollregion=(0,0, self._canvasWidth, self._canvasHeight))
+        canvas.configure(yscrollcommand=vscrollbar.set,xscrollcommand=hscrollbar.set)
+
+        canvas.grid(row=0,column=0)
+        vscrollbar.grid(row=0,column=1,rowspan=2,sticky='nse')
+        hscrollbar.grid(row=1,column=0,sticky='wse')
 
 class Homepage(tk.Frame):
     def __init__(self, master):
@@ -716,7 +762,7 @@ class Page2_SignupAdmin(tk.Frame):
                         if not(cond6):
                             messagebox.showwarning("Weak PIN", "PIN must be of atleast 6 digits.")
                             return
-                        walno=Apptools.generatewalletno(self)
+                        walno=Apptools.generateuniquecode(self,"walletbank","WalNo")
                         uid=str(Apptools.generate_id(self, "logindataadmin"))
 
                         rec2=Apptools.insertSQL(self,"logindataadmin",int(uid),name,float(age),gender,int(mobno),user,pswd,int(pin),walno)
@@ -858,7 +904,7 @@ class Page2_SignupBuyer(tk.Frame):
                             messagebox.showwarning("Weak PIN", "PIN must be of atleast 6 digits.")
                             return
                         uid=str(Apptools.generate_id(self, "logindatabuyer"))
-                        walno=Apptools.generatewalletno(self)
+                        walno=Apptools.generateuniquecode(self,"walletbank","WalNo")
                         if walno:
                             rec = Apptools.insertSQL(self,"logindatabuyer",int(uid),name,float(age),gender,int(mobno),DelAdd,user,pswd,walno,int(pin),'N')
                             if rec is not None:
@@ -1007,7 +1053,7 @@ class Page2_SignupSeller(tk.Frame):
                             messagebox.showwarning("Weak PIN", "PIN must be of atleast 6 digits.")
                             return
                         uid=str(Apptools.generate_id(self, "logindataseller"))
-                        walno=Apptools.generatewalletno(self)
+                        walno=Apptools.generateuniquecode(self,"walletbank","WalNo")
                         if walno:
                             rec=Apptools.insertSQL(self,"logindataseller",int(uid),name,float(age),gender,int(mobno),OrgName,OrgAdd,user,pswd,walno,int(pin))
                             if rec is not None:
@@ -3337,36 +3383,6 @@ class Page4_BuyerWalletRecharge(tk.Frame):
         lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1,padx=30,pady=10)
 
-class ScrollableFrame(ttk.Frame):
-    def __init__(self, container, *args, **kwargs):
-        super().__init__(container, *args, **kwargs)
-        canvas = tk.Canvas(self,bg="#333333")
-        canvas.config(scrollregion=(0,0,900,1000))
-        vscrollbar = ttk.Scrollbar(self, orient="vertical", command=canvas.yview)
-        hscrollbar = ttk.Scrollbar(self, orient="horizontal", command=canvas.xview)
-
-
-        s = ttk.Style()
-        s.configure('TFrame', background='#333333')
-
-        self.scrollable_frame = ttk.Frame(canvas)
-
-        self.scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(
-                scrollregion=canvas.bbox("all")
-            )
-        )
-        canvas.create_window((0, 0), window=self.scrollable_frame,anchor="nw")
-        self._canvasWidth=775
-        self._canvasHeight=500
-        canvas.config(width=self._canvasWidth,height=self._canvasHeight,scrollregion=(0,0, self._canvasWidth, self._canvasHeight))
-        canvas.configure(yscrollcommand=vscrollbar.set,xscrollcommand=hscrollbar.set)
-
-        canvas.grid(row=0,column=0)
-        vscrollbar.grid(row=0,column=10,rowspan=10,sticky='nse')
-        hscrollbar.grid(row=21,column=0,columnspan=10,sticky='wse')
-
 
 class Page4_BuyerShopping(tk.Frame):
     def __init__(self, master):
@@ -3376,7 +3392,7 @@ class Page4_BuyerShopping(tk.Frame):
     def makeWidgets(self, master):
 
         frame = ScrollableFrame(self)
-        
+
         btn=tk.Button(frame.scrollable_frame,text="Go Back",command=lambda: master.switch_frame(Page3_BuyerShoppe))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
@@ -3395,26 +3411,67 @@ class Page4_BuyerShopping(tk.Frame):
         Dir+=["Img7.jpg","Img8.png","Img9.jpg","Img10.png","Img11.png","Img12.png"]
         r,c=3,1
         for i in range(len(Dir)):
-            Apptools.imageButton(frame.scrollable_frame,"CardsShop//"+Dir[i],200,120,r,c)
-            imgbtn.config(command=lambda: self.framechange(master,i))
+            diry="CardsShop//"+Dir[i]
+            try:
+                Photo = Image.open(diry)
+                Photo = Photo.resize((200, 200))
+                render = ImageTk.PhotoImage(Photo)
+
+                imgbtnfs = tk.Button(frame.scrollable_frame, image=render)
+                imgbtnfs.image = render
+                imgbtnfs.grid(row = r,column=c,padx=10,pady=10)
+                imgbtnfs.config(command=lambda x=i: self.framechange(master,x))
+
+            except Exception as e:
+                print(e)
             if c==3:
                 r+=1
                 c=1
             else:
                 c+=1
 
-        frame.grid(row=10,column=1)
 
-    def framechange(self,master,Img):
-        print(Img)
-        if Img.startswith("Img") and( Img.endswith(".png") or Img.endswith(".jpg")):
-            Img=Img[3:Img.find('.')]
-            ChoosedCategory=Img
-            print(ChoosedCategory)
-            master.switch_frame(Page3_BuyerShoppe)
-        
+        frame.grid(row=0,column=0)
+
+    def framechange(self,master,x):
+        globals()['itemtype']=x
+        master.switch_frame(Page5_BuyerItemPicker)
 
 
+class Page5_BuyerItemPicker(tk.Frame):
+    def __init__(self,master):
+        tk.Frame.__init__(self,master,bg='#333333')
+        self.makeWidgets(master)
+
+    def makeWidgets(self,master):
+
+        frame = ScrollableFrame(self)
+
+        btn=tk.Button(frame.scrollable_frame,text="Go Back",command=lambda: master.switch_frame(Page4_BuyerShopping))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=0, column=0, sticky="w")
+
+        btn=tk.Button(frame.scrollable_frame,text="Logout",command=lambda: Apptools.logout(self, master))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=0, column=4, sticky="e")
+
+        lbl = tk.Label(frame.scrollable_frame, text="Kans\nStart Shopping")
+        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=1, column=1,pady=10,columnspan=3)
+
+        cat=self.itemcategory(itemtype)
+
+        lbl = tk.Label(frame.scrollable_frame, text="You Searched For Category:"+cat)
+        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=2, column=1,pady=10,columnspan=3)
+
+        frame.grid(row=0,column=0)
+
+    def itemcategory(self,i):
+        Category = ["Stationary","Electronics","Clothing","Beauty",
+                                "Softwares","Sports","Daily Use","Grocery","Health","Others"]
+        if i<=9:
+            return Category[i]
 
 class Page4_BuyerSearchItems(tk.Frame):
     def __init__(self, master):
@@ -3429,9 +3486,342 @@ class Page4_BuyerSearchItems(tk.Frame):
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=4, sticky="e")
 
-        lbl = tk.Label(self, text="Delete Account")
+        lbl = tk.Label(self, text="Search Items")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=1, column=2,padx=30,pady=10)
+        lbl.grid(row=1, column=1,columnspan=4,padx=30,pady=10)
+
+        lbl = tk.Label(self, text="Search Criteria")
+        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=2, column=1,padx=5,pady=10)
+
+        Searchcr = ["Item Name","Description","Category"]
+
+        SearchcrVar = StringVar(self, "Item Name")
+        Menu = tk.OptionMenu(self, SearchcrVar, *Searchcr)
+        Menu.config(bg="#333333", bd=0, fg="#E8E8E8", activebackground="#333333")
+        Menu["menu"].config(bg="#333333", fg="#E8E8E8", activebackground="#1F8EE7")
+        Menu.grid(row=2, column=2)
+
+        lbl = tk.Label(self, text="Enter Value")
+        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=3, column=1,padx=5,pady=10)
+
+        val=tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        val.grid(row=3, column=2)
+
+        btn=tk.Button(self,text="Search")
+        btn.config(command=lambda: self.search(master,val.get(),SearchcrVar.get()))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=4, column=3,pady=10)
+
+    def search(self,master, text, criteria):
+        Apptools.defaultqueryrun(self,"items")
+
+        if Apptools.is_not_null(self, text):
+            query ="Select * from items where "+ self.dbeqv(criteria)+ " like '%"+ text+ "%';"
+            record = Apptools.sql_run(self, query)
+
+            if record is not None:
+                out = record[0]
+                self.output(master,out)
+        else:
+            messagebox.showwarning("Error", "Incomplete input!")
+
+    def dbeqv(self,colname):
+        txt=""
+        data = ["Item Name","Description","Category"]
+        if colname==data[0]:
+            txt="iname"
+        elif colname==data[1]:
+            txt="idesc"
+        elif colname==data[2]:
+            txt="icat"
+        return txt
+
+    def output(self,master, out):
+        sep = ttk.Separator(self,orient='horizontal')
+        sep.grid(row=5,column=0,columnspan=5,sticky="ew")
+        frame = ScrollableFrame(self,cw=500,ch=300)
+
+        if out!=[]:
+            r=0
+            for ino,iname,iwp,irp,idesc,icat,istock,imgdir,selluser in out:
+
+                orgname=self.sellerorgname(selluser)
+
+                txt="Item name : "+iname.title()+"\n"+"Seller : "+orgname
+                txt+="\nDescription : "+idesc.title()+"\nCategory : "+icat.title()
+                txt+="\nPrice : ₹"+str(irp)
+
+                try:
+                    Photo = Image.open(imgdir)
+                    Photo = Photo.resize((200, 200))
+                    render = ImageTk.PhotoImage(Photo)
+
+                except Exception as e:
+                    print(e)
+
+                    Photo = Image.open("Additem.png")
+                    Photo = Photo.resize((250, 150))
+                    render = ImageTk.PhotoImage(Photo)
+
+                imgbtnfs = tk.Button(frame.scrollable_frame,text=txt ,image=render,compound =tk.LEFT)
+                imgbtnfs.image = render
+                imgbtnfs.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0)
+                imgbtnfs.config(activebackground="#3297E9",font=("Segoe Print", 15))
+                imgbtnfs.grid(row =r,column=0,padx=10,pady=10,sticky="ew")
+
+                idata=[ino,iname,iwp,irp,idesc,icat,istock,imgdir,selluser,orgname]
+                imgbtnfs.config(command = lambda x=idata: self.framechange(master,x))
+                r+=1
+
+        else:
+            lbl = tk.Label(frame.scrollable_frame, text="No Items Found :-(")
+            lbl.config(font=("Segoe Print", 30), fg="#E8E8E8", bg="#333333")
+            lbl.grid(row=0, column=2,columnspan=4,padx=100,pady=100)
+
+        frame.grid(row=6,column=0,columnspan=5)
+
+    def sellerorgname(self,suser):
+        rec=Apptools.defaultqueryrun(self,"logindataseller")
+        if rec:
+            query="select OrgName from logindataseller where username='"+suser+"';"
+            out=Apptools.sql_run(self,query)
+            if out:
+                if out[0]:
+                    return out[0][0][0]
+
+    def framechange(self,master,x):
+        globals()['chooseditemdetails']=x
+        master.switch_frame(Page6_BuyerProductView)
+
+class Page6_BuyerProductView(tk.Frame):
+    def __init__(self, master):
+        tk.Frame.__init__(self, master, bg="#333333")
+        self.makeWidgets(master)
+
+    def makeWidgets(self, master):
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_BuyerShoppe))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=0, column=0, sticky="w")
+
+        btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=0, column=4, sticky="e")
+
+        lbl = tk.Label(self, text="Kans : Your Shopping Partner")
+        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=1, column=1,columnspan=4,padx=30,pady=10)
+
+        itemdetails=chooseditemdetails
+
+        ino,iname,iwp,irp,idesc,icat,istock,imgdir,selluser,orgname=itemdetails
+
+        txt="Item name : "+iname.title()+"\n"+"Seller : "+orgname
+        txt+="\nDescription : "+idesc.title()+"\nCategory : "+icat.title()
+        txt+="\nPrice : ₹"+str(irp)
+
+        try:
+            Photo = Image.open(imgdir)
+            Photo = Photo.resize((200, 200))
+            render = ImageTk.PhotoImage(Photo)
+
+        except Exception as e:
+            print(e)
+
+            Photo = Image.open("Additem.png")
+            Photo = Photo.resize((200, 200))
+            render = ImageTk.PhotoImage(Photo)
+
+        lbl = tk.Label(self,text=txt ,image=render,compound =tk.LEFT)
+        lbl.image = render
+        lbl.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0)
+        lbl.config(activebackground="#3297E9",font=("Segoe Print", 15))
+        lbl.grid(row =2,column=1,columnspan=2,padx=10,pady=10)
+
+        lbl = tk.Label(self, text="Enter Quantity")
+        lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=3, column=1,padx=5,pady=10)
+
+        qty=tk.Entry(self, fg="#E8E8E8", bg="#333333")
+        qty.grid(row=3, column=2)
+        qty.insert(0, 1)
+
+        btn=tk.Button(self,text="Add to Cart",command=lambda: self.addtocart(ino,qty.get(),istock))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=4, column=2,pady=10)
+
+        btn=tk.Button(self,text="Add to Wishlist",command=lambda: self.addtowishlist(ino))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=4, column=3,padx=10)
+
+        btn=tk.Button(self,text="Proceed to Pay",command=lambda: self.paypage(master,ino,qty.get(),istock))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=5, column=2,padx=10,pady=10)
+
+    def addtocart(self,ino,iqty,istock,showMsg=True):
+        cond1=Apptools.check_digit(self, iqty)
+        cond2=Apptools.in_limit(self, 1, istock, iqty)
+        cond3=iqty.find(".")==-1 and iqty.find("-")==-1
+
+        if cond1 and cond2 and cond3:
+            cartuc=Apptools.generateuniquecode(self,"cart","cartuc")
+            rec = Apptools.insertSQL(self,"cart",cartuc,ino,iqty,G_USERNAME.get())
+            if rec is not None and showMsg:
+                messagebox.showinfo("Success!","Added to Cart Successfully!")
+        else:
+            messagebox.showwarning("Invalid Input!","Enter Valid Input for Quantity 0<>"+str(istock))
+
+    def addtowishlist(self,ino):
+
+        wishlistuc=Apptools.generateuniquecode(self,"wishlist","wishlistuc")
+        rec = Apptools.insertSQL(self,"wishlist",wishlistuc,ino,G_USERNAME.get())
+        if rec is not None:
+            messagebox.showinfo("Success!","Added to Wish List Successfully!")
+
+    def paypage(self,master,ino,qty,istock):
+        self.addtocart(ino,qty,istock,showMsg=False)
+        master.switch_frame(Page7_BuyerPaymentProceed)
+
+class Page7_BuyerPaymentProceed(tk.Frame):
+    def __init__(self, master):
+        tk.Frame.__init__(self, master, bg="#333333")
+        self.makeWidgets(master)
+
+    def makeWidgets(self, master):
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_BuyerShoppe))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=0, column=0, sticky="w")
+
+        btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=0, column=4, sticky="e")
+
+        lbl = tk.Label(self, text="Payment Confirmation")
+        lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=1, column=0,columnspan=3,padx=30,pady=10)
+
+        lbl = tk.Label(self, text="Cart")
+        lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=2, column=0,columnspan=2,padx=30,pady=10,sticky="w")
+
+        sep = ttk.Separator(self,orient='horizontal')
+        sep.grid(row=3,column=0,sticky="ew",columnspan=2)
+
+        frame = ScrollableFrame(self,cw=550,ch=300)
+
+        out=self.retrievedata()
+
+        totalprice=0
+
+        if out!=[]:
+            r=0
+            for ino,iname,iwp,irp,idesc,icat,istock,imgdir,selluser,iqty in out:
+
+                orgname=self.sellerorgname(selluser)
+
+                txt="Item name : "+iname.title()+"\n"+"Seller : "+orgname
+                txt+="\nDescription : "+idesc.title()+"\nCategory : "+icat.title()
+                txt+="\nPrice : ₹"+str(irp)+"\nQuantity : "+str(iqty)
+
+                try:
+                    Photo = Image.open(imgdir)
+                    Photo = Photo.resize((200, 200))
+                    render = ImageTk.PhotoImage(Photo)
+
+                except Exception as e:
+                    print(e)
+
+                    Photo = Image.open("Additem.png")
+                    Photo = Photo.resize((200, 200))
+                    render = ImageTk.PhotoImage(Photo)
+
+                lbl = tk.Label(frame.scrollable_frame,text=txt ,image=render,compound =tk.LEFT)
+                lbl.image = render
+                lbl.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0)
+                lbl.config(activebackground="#3297E9",font=("Segoe Print", 15))
+                lbl.grid(row =r,column=0,padx=10,pady=10,sticky="ew")
+
+                btn=tk.Button(frame.scrollable_frame,text="Remove Item",command=lambda x=ino: self.deleteitemcart(master,ino))
+                btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+                btn.grid(row=r, column=1)
+                r+=1
+                totalprice+=irp*iqty
+
+        else:
+            lbl = tk.Label(frame.scrollable_frame, text="No Items Found :-(")
+            lbl.config(font=("Segoe Print", 30), fg="#E8E8E8", bg="#333333")
+            lbl.grid(row=0, column=2,columnspan=4,padx=100,pady=100)
+
+        frame.grid(row=4,column=0,columnspan=2)
+
+        userd=self.userdata()
+        if userd is not None:
+            lbl = tk.Label(self, text="Deliever to\n"+userd[0]+"\n"+userd[1])
+            lbl.config(font=("Segoe Print", 20), fg="#E8E8E8", bg="#333333")
+            lbl.grid(row=3, column=2,rowspan=2,padx=10,pady=10,sticky="ns")
+
+            if userd[2]=='Y':
+                btn=tk.Button(self,text="Bargain",command=lambda: self.bargain(out))
+                btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+                btn.grid(row=0, column=4, sticky="e")
+
+
+        lbl = tk.Label(self, text="Amount to be Paid : "+str(totalprice))
+        lbl.config(font=("Segoe Print", 20), fg="#E8E8E8", bg="#333333")
+        lbl.grid(row=5, column=0,columnspan=2,padx=10,pady=10,sticky="ns")
+
+        btn=tk.Button(self,text="Proceed to Pay",command=lambda: self.payportal())
+        btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
+        btn.grid(row=0, column=4, sticky="e")
+
+
+
+    def retrievedata(self):
+        Apptools.defaultqueryrun(self,"cart")
+        Apptools.defaultqueryrun(self,"items")
+        query="Select itemno,iquantity from cart where buyerusername ='"+G_USERNAME.get()+"';"
+        out=Apptools.sql_run(self,query)
+
+        data=[]
+        if out is not None:
+            if out[0]!=[]:
+                out=out[0]
+                for ino,iqty in out:
+                    query2="Select * from items where itemno="+str(ino)+";"
+                    out2=Apptools.sql_run(self,query2)
+
+                    if out2 is not None and out2[0]!=[]:
+                        out2=out2[0][0]
+                        data.append(list(out2)+[iqty])
+        return data
+
+    def sellerorgname(self,suser):
+        rec=Apptools.defaultqueryrun(self,"logindataseller")
+        if rec:
+            query="select OrgName from logindataseller where username='"+suser+"';"
+            out=Apptools.sql_run(self,query)
+            if out:
+                if out[0]:
+                    return out[0][0][0]
+
+    def userdata(self):
+        query="select Name,DelAdd,IsPremium from logindatabuyer where username='"+G_USERNAME.get()+"';"
+
+        out=Apptools.sql_run(self,query)
+        if out:
+            if out[0]:
+                return out[0][0]
+
+    def bargain(self):
+        pass
+
+    def payportal(self):
+        pass
+        #remove stock
+        #empty cart
+        #check and deduct money
+
 
 class Page4_BuyerWishlist(tk.Frame):
     def __init__(self, master):
