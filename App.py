@@ -88,7 +88,7 @@ class Apptools:
         Warning
         -------
         It can't run few sql commands(especially
-        those which are non-void and doesn't start with SELECT or DESC/DESCRIBE).
+        those which are non-void and doesn't start with SELECT or DESC/DESCRIBE or SHOW).
         """
         output = []
         sql_connection = None
@@ -215,6 +215,7 @@ class Apptools:
 
         while os.path.exists(diry):
             name=Apptools.randomtxt(self, 8)
+            diry=savlocimgbtn+name+extension
         return name
 
 
@@ -1582,8 +1583,8 @@ class Page3_BuyerPremium(tk.Frame):
         query_3 = "Update logindatabuyer set isPremium='Y' where username = %s;"
         SUPERADMIN=self.findsuperadmin()
         if SUPERADMIN is not None:
-            query="Update walletbank set Amt =Amt-%s where walno=%s and pin=%s;"
-            rec=Apptools.sql_run(self,[query,(price+5,walno,pin)])
+            query="Update walletbank set Amt =Amt+%s where walno=%s;"
+            rec=Apptools.sql_run(self,[query,(100,SUPERADMIN[1])])
             if rec is not None:
                 rec=Apptools.defaultqueryrun(self, "logindatabuyer")
                 if rec:
@@ -1599,13 +1600,15 @@ class Page3_BuyerPremium(tk.Frame):
                                 master.switch_frame(Page3_DashboardBuyer)
                     elif out is not None and out<100:
                         messagebox.showwarning("Insufficient fund in wallet","Please recharge your wallet to continue.")
+        else:
+            messagebox.showinfo("No admin on system","Can't proceed transaction.\nNo admin on system")
 
     def findsuperadmin(self):
         Apptools.defaultqueryrun(self,"logindataadmin")
-        query="Select Username from logindataadmin ORDER by id;"
+        query="Select Username,walno from logindataadmin ORDER by id;"
         out=Apptools.sql_run(self,query)
         if out and out[0]:
-            return out[0][0][0]
+            return out[0][0]
 
 
 class Page3_BuyerShoppe(tk.Frame):
@@ -1752,7 +1755,7 @@ class Page4_AdminEditProfile(tk.Frame):
         Fieldname=["Name","Age","Mobile No."]
         for i in range(3):
             lbl = tk.Label(self, text=Fieldname[i])
-            lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+            lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
             lbl.grid(row=i+2, column=1,padx=20,pady=5)
 
             Entry_Obj.append(tk.Entry(self, fg="#E8E8E8", bg="#333333"))
@@ -1760,7 +1763,7 @@ class Page4_AdminEditProfile(tk.Frame):
             Entry_Obj[i].insert(0, data[i])
 
         lbl = tk.Label(self, text="Gender")
-        lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=5, column=1,padx=20)
 
         gender = StringVar(self, data[3])
@@ -2376,7 +2379,7 @@ class Page4_SellerEditProfile(tk.Frame):
         Fieldname=["Name","Age","Mobile No.","Name of Organisation","Address of Organisation"]
         for i in range(4):
             lbl = tk.Label(self, text=Fieldname[i])
-            lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+            lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
             lbl.grid(row=i+2, column=1,padx=20,pady=5)
 
             Entry_Obj.append(tk.Entry(self, fg="#E8E8E8", bg="#333333"))
@@ -2384,7 +2387,7 @@ class Page4_SellerEditProfile(tk.Frame):
             Entry_Obj[i].insert(0, data[i])
 
         lbl = tk.Label(self, text=Fieldname[4])
-        lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=6, column=1,padx=20,pady=5)
 
         Entry_Obj.append(tk.Text(self, fg="#E8E8E8", bg="#333333",height=5))
@@ -2393,7 +2396,7 @@ class Page4_SellerEditProfile(tk.Frame):
         Entry_Obj[4].insert(tk.INSERT, data[4])
 
         lbl = tk.Label(self, text="Gender")
-        lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=7, column=1,padx=20)
 
         gender = StringVar(self, data[5])
@@ -2931,7 +2934,7 @@ class Page4_SellerAddStocks(tk.Frame):
                 if data!=[]:
                     data=data[0][0]
                     lbl = tk.Label(self, text="No. of Stocks")
-                    lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+                    lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
                     lbl.grid(row=4, column=1,padx=20,pady=5)
 
                     Stock=tk.Entry(self, fg="#E8E8E8", bg="#333333")
@@ -3091,10 +3094,13 @@ class Page4_SellerSearchItem(tk.Frame):
         lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=0, column=0,padx=30,pady=10)
 
-        column=("Item no.","Item Name","Wholesale Price","Retail Price","Description","Category","Stock")
-        listBox = ttk.Treeview(screen)
+        frame = ScrollableFrame(screen,ch=228,cw=585)
+        sframe=frame.scrollable_frame
 
-        verscrlbar = ttk.Scrollbar(screen, orient ="vertical",command = listBox.yview)
+        column=("Item no.","Item Name","Wholesale Price","Retail Price","Description","Category","Stock")
+        listBox = ttk.Treeview(sframe)
+
+        verscrlbar = ttk.Scrollbar(sframe, orient ="vertical",command = listBox.yview)
         verscrlbar.grid(row=1,column=1,sticky="nsw",rowspan=2)
 
         listBox.config(selectmode="extended",columns=column,show="headings")
@@ -3117,6 +3123,8 @@ class Page4_SellerSearchItem(tk.Frame):
                 ilen = tkFont.Font().measure(val)
                 if listBox.column(column[indx], width=None) < ilen:
                     listBox.column(column[indx], width=ilen)
+
+        frame.grid(row=1,column=0)
 
     def sortby(self,tree, col, descending):
         data = [(tree.set(child, col), child) for child in tree.get_children('')]
@@ -3213,42 +3221,51 @@ class Page4_SellerRecentTransactions(tk.Frame):
         self.makeWidgets(master)
     def makeWidgets(self, master):
 
-        frame = ScrollableFrame(self,ch=300,cw=585)
-        sframe=frame.scrollable_frame
-
-        btn=tk.Button(sframe,text="Go Back",command=lambda: master.switch_frame(Page3_SellerItemManagement))
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_SellerItemManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
-        btn=tk.Button(sframe,text="Logout",command=lambda: Apptools.logout(self, master))
+        btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=3, sticky="e")
 
-        lbl = tk.Label(sframe, text="Transaction Log")
+        lbl = tk.Label(self, text="Transaction Log")
         lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=0,columnspan=4,padx=30,pady=10)
 
-        self.recentlybrought(sframe)
-
-        frame.grid(row=0,column=0)
+        self.recentlytrans()
 
 
-    def recentlybrought(self,sframe):
+    def recentlytrans(self):
         rec=Apptools.defaultqueryrun(self,"trecord")
         query="Select * from trecord where SellerUsername=%s;"
         out=Apptools.sql_run(self,[query,(G_USERNAME.get(),)])
 
         if out is not None and rec:
+            sep = ttk.Separator(self,orient='horizontal')
+            sep.grid(row=2,column=0,columnspan=4,sticky="ews")
+            frame = ScrollableFrame(self,ch=228,cw=585)
+            sframe=frame.scrollable_frame
             out=out[0]
             if out!=[]:
                 self.output(out,sframe)
             else:
+                lbl = tk.Label(sframe, text="No recent transactions")
+                lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
+                lbl.grid(row=0, column=0,padx=180,pady=80)
                 messagebox.showinfo( "No records found","No recent transactions")
+
+            frame.grid(row=3,column=0,columnspan=4)
 
     def output(self, out,sframe):
         column = ("Transaction Unique Id","Transaction Id","Date and Time","Item name","Quantity","Amount Paid","Buyer Name","Seller Organisation")
 
         listBox = ttk.Treeview(sframe,selectmode="extended",columns=column,show="headings")
+
+        verscrlbar = ttk.Scrollbar(sframe, orient ="vertical",command = listBox.yview)
+        verscrlbar.grid(row=2,column=2,sticky="nsw",rowspan=2)
+
+        listBox.configure(yscrollcommand = verscrlbar.set)
 
         for i in range(len(column)):
             listBox.heading(column[i], text=column[i],command=lambda c=column[i]: self.sortby(listBox, c, 0))
@@ -3362,7 +3379,7 @@ class Page4_BuyerEditProfile(tk.Frame):
         Fieldname=["Name","Age","Mobile No.","Delivery Address"]
         for i in range(3):
             lbl = tk.Label(self, text=Fieldname[i])
-            lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+            lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
             lbl.grid(row=i+2, column=1,padx=20,pady=5)
 
             Entry_Obj.append(tk.Entry(self, fg="#E8E8E8", bg="#333333"))
@@ -3370,7 +3387,7 @@ class Page4_BuyerEditProfile(tk.Frame):
             Entry_Obj[i].insert(0, data[i])
 
         lbl = tk.Label(self, text=Fieldname[3])
-        lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=5, column=1,padx=20,pady=5)
 
         Entry_Obj.append(tk.Text(self, fg="#E8E8E8", bg="#333333",height=5))
@@ -3379,7 +3396,7 @@ class Page4_BuyerEditProfile(tk.Frame):
         Entry_Obj[3].insert(tk.INSERT, data[3])
 
         lbl = tk.Label(self, text="Gender")
-        lbl.config(font=("Segoe Print", 15), fg="#E8E8E8", bg="#333333")
+        lbl.config(font=("Segoe UI", 10), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=6, column=1,padx=20)
 
         gender = StringVar(self, data[4])
@@ -3430,31 +3447,31 @@ class Page4_BuyerRecentlyBrought(tk.Frame):
         self.makeWidgets(master)
     def makeWidgets(self, master):
 
-        frame = ScrollableFrame(self,ch=300,cw=585)
-
-        btn=tk.Button(frame.scrollable_frame,text="Go Back",command=lambda: master.switch_frame(Page3_BuyerProfileManagement))
+        btn=tk.Button(self,text="Go Back",command=lambda: master.switch_frame(Page3_BuyerProfileManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
-        btn=tk.Button(frame.scrollable_frame,text="Logout",command=lambda: Apptools.logout(self, master))
+        btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=0, column=3, sticky="e")
 
-        lbl = tk.Label(frame.scrollable_frame, text="Recently Brought")
+        lbl = tk.Label(self, text="Recently Brought")
         lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=0,columnspan=4,padx=30,pady=10)
 
-        self.recentlybrought(frame.scrollable_frame)
-
-        frame.grid(row=0,column=0)
+        self.recentlybrought()
 
 
-    def recentlybrought(self,sframe):
+    def recentlybrought(self):
         rec=Apptools.defaultqueryrun(self,"trecord")
         query="Select * from trecord where BuyerUsername=%s;"
         out=Apptools.sql_run(self,[query,(G_USERNAME.get(),)])
 
         if out is not None and rec:
+            sep = ttk.Separator(self,orient='horizontal')
+            sep.grid(row=2,column=0,columnspan=4,sticky="ews")
+            frame = ScrollableFrame(self,ch=228,cw=585)
+            sframe=frame.scrollable_frame
             out=out[0]
             if out!=[]:
                 self.output(out,sframe)
@@ -3462,13 +3479,21 @@ class Page4_BuyerRecentlyBrought(tk.Frame):
                 messagebox.showinfo( "No records found","No Items Brought Recently\nStart Shopping")
 
                 lbl = tk.Label(sframe, text="Start Shopping")
-                lbl.config(font=("Segoe UI",15), fg="#E8E8E8", bg="#333333")
-                lbl.grid(row=2, column=1,padx=30,pady=10)
+                lbl.config(font=("Segoe UI",20), fg="#E8E8E8", bg="#333333")
+                lbl.grid(row=0, column=0,padx=220,pady=80)
+
+            frame.grid(row=3,column=0,columnspan=4)
+
 
     def output(self, out,sframe):
         column = ("Transaction Unique Id","Transaction Id","Date and Time","Item name","Quantity","Amount Paid","Buyer Name","Seller Organisation")
 
         listBox = ttk.Treeview(sframe,selectmode="extended",columns=column,show="headings")
+
+        verscrlbar = ttk.Scrollbar(sframe, orient ="vertical",command = listBox.yview)
+        verscrlbar.grid(row=2,column=2,sticky="nsw")
+
+        listBox.configure(yscrollcommand = verscrlbar.set)
 
         for i in range(len(column)):
             listBox.heading(column[i], text=column[i],command=lambda c=column[i]: self.sortby(listBox, c, 0))
@@ -3823,8 +3848,8 @@ class Page5_BuyerItemPicker(tk.Frame):
 
                 orgname=self.sellerorgname(selluser)
 
-                txt="Item name : "+iname.title()+"\nSeller : "+orgname
-                txt+="\nDescription : "+idesc.title()+"\nCategory : "+icat.title()
+                txt="Item name : "+iname.title().strip()+"\nSeller : "+orgname
+                txt+="\nDescription : "+idesc.title().strip()+"\nCategory : "+icat.title()
                 txt+="\nPrice : ₹"+str(irp)
 
                 try:
@@ -3952,8 +3977,8 @@ class Page4_BuyerSearchItems(tk.Frame):
 
                 orgname=self.sellerorgname(selluser)
 
-                txt="Item name : "+iname.title()+"\nSeller : "+orgname
-                txt+="\nDescription : "+idesc.title()+"\nCategory : "+icat.title()
+                txt="Item name : "+iname.title().strip()+"\nSeller : "+orgname
+                txt+="\nDescription : "+idesc.title().strip()+"\nCategory : "+icat.title()
                 txt+="\nPrice : ₹"+str(irp)
 
                 try:
@@ -4020,8 +4045,8 @@ class Page6_BuyerProductView(tk.Frame):
 
         ino,iname,iwp,irp,idesc,icat,istock,imgdir,selluser,orgname=itemdetails
 
-        txt="Item name : "+iname.title()+"\nSeller : "+orgname
-        txt+="\nDescription : "+idesc.title()+"\nCategory : "+icat.title()
+        txt="Item name : "+iname.title().strip()+"\nSeller : "+orgname
+        txt+="\nDescription : "+idesc.title().strip()+"\nCategory : "+icat.title()
         txt+="\nPrice : ₹"+str(irp)
 
         try:
@@ -4159,8 +4184,8 @@ class Page7_BuyerPaymentProceed(tk.Frame):
 
                 orgname=self.sellerorgname(selluser)
 
-                txt="Item name : "+iname.title()+"\nSeller : "+orgname
-                txt+="\nDescription : "+idesc.title()+"\nCategory : "+icat.title()
+                txt="Item name : "+iname.title().strip()+"\nSeller : "+orgname
+                txt+="\nDescription : "+idesc.title().strip()+"\nCategory : "+icat.title()
                 txt+="\nPrice : ₹"+str(irp)+"\nQuantity : "+str(iqty)
 
                 try:
@@ -4280,11 +4305,11 @@ class Page7_BuyerPaymentProceed(tk.Frame):
         return round(netbargain,2) # To ensure bargain is never greater than the limit due to approximation
 
     def payportal(self,master,out,price,sframe):
-
+        items=[]
         if out!=[]:
             for ino,iname,iwp,irp,idesc,icat,istock,imgdir,selluser,iqty in out:
                 if istock>=iqty:
-                    self.paymentpage(master,price,out,sframe)
+                    items.append([ino,iname,iwp,irp,idesc,icat,istock,imgdir,selluser,iqty])
 
                 else:
                     txtmsg="Only a Few stocks are left as item is getting out of stock."
@@ -4292,6 +4317,8 @@ class Page7_BuyerPaymentProceed(tk.Frame):
                     txtmsg+="\nCan't Buy this item. :-(\nTry Checking with fewer stocks"
 
                     messagebox.showwarning("Item is out of Stock",txtmsg)
+            if items!=[]:
+                self.paymentpage(master,price,items,sframe)
 
         else:
             messagebox.showwarning("Empty Cart","Your Cart is Empty Start Shopping Now.")
@@ -4431,9 +4458,6 @@ class Page7_BuyerPaymentProceed(tk.Frame):
             return out[0][0][0]
 
 
-
-
-
 class Page4_BuyerWishlist(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master, bg="#333333")
@@ -4463,8 +4487,8 @@ class Page4_BuyerWishlist(tk.Frame):
 
                 orgname=self.sellerorgname(selluser)
 
-                txt="Item name : "+iname.title()+"\nSeller : "+orgname
-                txt+="\nDescription : "+idesc.title()+"\nCategory : "+icat.title()
+                txt="Item name : "+iname.title().strip()+"\nSeller : "+orgname
+                txt+="\nDescription : "+idesc.title().strip()+"\nCategory : "+icat.title()
                 txt+="\nPrice : ₹"+str(irp)
 
                 try:
