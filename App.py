@@ -3,10 +3,15 @@ Created on Tue Jan 12 18:17:14 2021
 Requirements:
     PIL library,mysql.connector,SQL DATABASE WITH localhost,user=root,password=password
     local image files
-@author: compaq
+@author: Praveen
 """
 
 try:
+    import random
+    import os
+    import errno
+    from datetime import datetime
+
     try:
         import tkinter as tk
     except ImportError:
@@ -23,10 +28,6 @@ try:
     import tkinter.font as tkFont
     import mysql.connector as mysqlcon
     from PIL import Image, ImageTk
-    import random
-    import os
-    import errno
-    from datetime import datetime
 
 except Exception as e:
     import sys
@@ -427,10 +428,53 @@ class Apptools:
             rev = i + rev
         return rev
 
-    def tkLabel(self, txt, ro, col, fsize=15, fon="Segoe UI", px=0, py=0, cs=1, rs=1):
+    def tkLabel(
+        self, txt, ro, col, fsize=15, fon="Segoe UI", px=0, py=0, cs=1, rs=1, cssp=1
+    ):
         lbl = tk.Label(self, text=txt)
         lbl.config(font=(fon, fsize), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=ro, column=col, padx=px, pady=py, columnspan=cs, rowspan=rs)
+
+    def output(self, master, column, out, showLbl=True, sr=0, sc=0, cssp=1):
+        frame = ScrollableFrame(self, ch=250, cw=720)
+        sframe = frame.scrollable_frame
+        if showLbl:
+            Apptools.tkLabel(
+                sframe, "Search Items", 0, 0, 20, "Segoe UI", 30, 10, rs=1, cs=1
+            )
+
+        listBox = ttk.Treeview(sframe)
+
+        listBox.config(selectmode="extended", columns=column, show="headings")
+
+        for i in range(0, len(column)):
+            listBox.heading(column[i], text=column[i])
+            listBox.column(column[i], minwidth=0)
+
+        for col in column:
+            listBox.heading(col, text=col)
+            listBox.column(col, width=tkFont.Font().measure(col.title()))
+        listBox.grid(row=1, column=0)
+
+        for i in out:
+            i = Apptools.singleline(self, i)
+            listBox.insert("", "end", values=i[: len(column)])
+
+            for indx, val in enumerate(i[: len(column)]):
+                ilen = tkFont.Font().measure(val)
+                if listBox.column(column[indx], width=None) < ilen:
+                    listBox.column(column[indx], width=ilen)
+
+        frame.grid(row=sr, column=sc, columnspan=cssp)
+
+    def singleline(self, txtlines):
+        l = []
+        for i in txtlines:
+            if isinstance(i, str):
+                l.append(i.replace("\n", " "))
+            else:
+                l.append(i)
+        return l
 
     def clearImgCache(self):
         Apptools.defaultqueryrun(self, "items")
@@ -1492,6 +1536,15 @@ class Page4_SellerSearchItem(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master, bg="#333333")
         self.makeWidgets(master)
+        self.column = (
+            "Item no.",
+            "Item Name",
+            "Wholesale Price",
+            "Retail Price",
+            "Description",
+            "Category",
+            "Stock",
+        )
 
     def makeWidgets(self, master):
         btn = tk.Button(
@@ -1534,21 +1587,21 @@ class Page4_SellerSearchItem(tk.Frame):
         val.grid(row=3, column=2)
 
         btn = tk.Button(self, text="Search")
-        btn.config(command=lambda: self.search(val.get(), SearchcrVar.get()))
+        btn.config(command=lambda: self.search(master, val.get(), SearchcrVar.get()))
         btn.config(bg="#1F8EE7", padx=3, fg="#E8E8E8", bd=0, activebackground="#3297E9")
         btn.grid(row=4, column=3, pady=10)
 
         btn = tk.Button(self, text="Show All")
-        btn.config(command=self.showAll)
+        btn.config(command=lambda: self.showAll(master))
         btn.config(bg="#1F8EE7", padx=3, fg="#E8E8E8", bd=0, activebackground="#3297E9")
         btn.grid(row=5, column=3, pady=10)
 
         btn = tk.Button(self, text="Out of Stock")
-        btn.config(command=self.outofstock)
+        btn.config(command=lambda: self.outofstock(master))
         btn.config(bg="#1F8EE7", padx=3, fg="#E8E8E8", bd=0, activebackground="#3297E9")
         btn.grid(row=5, column=4, padx=5)
 
-    def search(self, text, criteria):
+    def search(self, master, text, criteria):
         Apptools.defaultqueryrun(self, "items")
 
         if Apptools.is_not_null(self, text):
@@ -1574,7 +1627,7 @@ class Page4_SellerSearchItem(tk.Frame):
             if record is not None:
                 out = record[0]
                 if out != []:
-                    self.output(out)
+                    self.output(master, out)
                 else:
                     messagebox.showinfo("No data", "No records found")
         else:
@@ -1582,37 +1635,31 @@ class Page4_SellerSearchItem(tk.Frame):
 
     def dbeqv(self, colname):
         txt = ""
-        data = [
-            "Item Name",
-            "Wholesale Price",
-            "Retail Price",
-            "Description",
-            "Category",
-        ]
-        if colname == data[0]:
-            txt = "iname"
-        elif colname == data[1]:
-            txt = "iwhp"
-        elif colname == data[2]:
-            txt = "irp"
-        elif colname == data[3]:
-            txt = "idesc"
-        elif colname == data[4]:
-            txt = "icat"
+        data = {
+            "Item Name": "iname",
+            "Wholesale Price": "iwhp",
+            "Retail Price": "irp",
+            "Description": "idesc",
+            "Category": "icat",
+        }
+        try:
+            txt = data[colname.title()]
+        except:
+            txt = ""
         return txt
 
-    def showAll(self):
+    def showAll(self, master):
         Apptools.defaultqueryrun(self, "items")
         sql_query = "Select * from items where SellerUsername=%s;"
         record = Apptools.sql_run(self, [sql_query, (G_USERNAME.get(),)])
         if record is not None:
             out = record[0]
             if out != []:
-                self.output(out)
+                self.output(master, out)
         if out == []:
             messagebox.showinfo("No data", "No records found")
 
-    def outofstock(self):
+    def outofstock(self, master):
         Apptools.defaultqueryrun(self, "items")
 
         sql_query = "Select * from items where SellerUsername=%s and istock=0;"
@@ -1620,63 +1667,17 @@ class Page4_SellerSearchItem(tk.Frame):
         if record is not None:
             out = record[0]
             if out != []:
-                self.output(out)
+                self.output(master, out)
             if out == []:
                 messagebox.showinfo("No data", "No records found")
 
-    def output(self, out):
+    def output(self, master, out):
         screen = tk.Toplevel(self, bg="#333333")
         screen.iconphoto(False, Icon)
         screen.title("Search Results")
         screen.resizable(0, 0)
 
-        Apptools.tkLabel(
-            screen, "Search Items", 0, 0, 20, "Segoe UI", 30, 10, rs=1, cs=1
-        )
-
-        column = (
-            "Item no.",
-            "Item Name",
-            "Wholesale Price",
-            "Retail Price",
-            "Description",
-            "Category",
-            "Stock",
-        )
-        listBox = ttk.Treeview(screen)
-
-        verscrlbar = ttk.Scrollbar(screen, orient="vertical", command=listBox.yview)
-        verscrlbar.grid(row=1, column=1, sticky="nsw", rowspan=2)
-
-        listBox.config(selectmode="extended", columns=column, show="headings")
-        listBox.configure(yscrollcommand=verscrlbar.set)
-
-        for i in range(0, len(column)):
-            listBox.heading(column[i], text=column[i])
-            listBox.column(column[i], minwidth=0)
-
-        for col in column:
-            listBox.heading(col, text=col)
-            listBox.column(col, width=tkFont.Font().measure(col.title()))
-        listBox.grid(row=1, column=0)
-
-        for i in out:
-            i = self.singleline(i)
-            listBox.insert("", "end", values=i[: len(column)])
-
-            for indx, val in enumerate(i[: len(column)]):
-                ilen = tkFont.Font().measure(val)
-                if listBox.column(column[indx], width=None) < ilen:
-                    listBox.column(column[indx], width=ilen)
-
-    def singleline(self, txtlines):
-        l = []
-        for i in txtlines:
-            if isinstance(i, str):
-                l.append(i.replace("\n", " "))
-            else:
-                l.append(i)
-        return l
+        Apptools.output(screen, master, self.column, out)
 
 
 class Page4_SellerRemoveItem(tk.Frame):
@@ -1768,11 +1769,8 @@ class Page4_SellerRecentTransactions(tk.Frame):
         self.makeWidgets(master)
 
     def makeWidgets(self, master):
-        frame = ScrollableFrame(self, ch=300, cw=585)
-        sframe = frame.scrollable_frame
-
         btn = tk.Button(
-            sframe,
+            self,
             text="Go Back",
             command=lambda: master.switch_frame(Page3_DashboardSeller),
         )
@@ -1780,33 +1778,19 @@ class Page4_SellerRecentTransactions(tk.Frame):
         btn.grid(row=0, column=0, sticky="w")
 
         btn = tk.Button(
-            sframe, text="Logout", command=lambda: Apptools.logout(self, master)
+            self, text="Logout", command=lambda: Apptools.logout(self, master)
         )
         btn.config(bg="#1F8EE7", padx=3, fg="#E8E8E8", bd=0, activebackground="#3297E9")
         btn.grid(row=0, column=3, sticky="e")
 
         Apptools.tkLabel(
-            sframe, "Transaction Log", 1, 0, 20, "Segoe UI", 30, 10, rs=1, cs=4
+            self, "Transaction Log", 1, 0, 20, "Segoe UI", 30, 10, rs=1, cs=4
         )
 
-        self.recentlybrought(sframe)
+        self.recentlybrought(master)
 
-        frame.grid(row=0, column=0)
-
-    def recentlybrought(self, sframe):
-        rec = Apptools.defaultqueryrun(self, "trecord")
-        query = "Select * from trecord where SellerUsername=%s;"
-        out = Apptools.sql_run(self, [query, (G_USERNAME.get(),)])
-
-        if out is not None and rec:
-            out = out[0]
-            if out != []:
-                self.output(out, sframe)
-            else:
-                messagebox.showinfo("No records found", "No recent transactions")
-
-    def output(self, out, sframe):
-        column = (
+    def recentlybrought(self, master):
+        self.column = (
             "Transaction Unique Id",
             "Transaction Id",
             "Date and Time",
@@ -1816,27 +1800,18 @@ class Page4_SellerRecentTransactions(tk.Frame):
             "Buyer Name",
             "Seller Organisation",
         )
+        rec = Apptools.defaultqueryrun(self, "trecord")
+        query = "Select * from trecord where SellerUsername=%s;"
+        out = Apptools.sql_run(self, [query, (G_USERNAME.get(),)])
 
-        listBox = ttk.Treeview(
-            sframe, selectmode="extended", columns=column, show="headings"
-        )
-
-        for i in range(len(column)):
-            listBox.heading(column[i], text=column[i])
-            listBox.column(column[i], minwidth=0)
-        for col in column:
-            listBox.heading(col, text=col)
-            listBox.column(col, width=tkFont.Font().measure(col.title()))
-        listBox.grid(row=2, column=1, sticky="we")
-
-        for i in out:
-            i = i[:-3]
-            listBox.insert("", "end", values=i)
-
-            for indx, val in enumerate(i):
-                ilen = tkFont.Font().measure(val)
-                if listBox.column(column[indx], width=None) < ilen:
-                    listBox.column(column[indx], width=ilen)
+        if out is not None and rec:
+            out = out[0]
+            if out != []:
+                Apptools.output(
+                    self, master, self.column, out, showLbl=False, sr=2, cssp=4
+                )
+            else:
+                messagebox.showinfo("No records found", "No recent transactions")
 
 
 class Page4_BuyerShowProfile(tk.Frame):
@@ -1909,42 +1884,25 @@ class Page4_BuyerRecentlyBrought(tk.Frame):
         self.makeWidgets(master)
 
     def makeWidgets(self, master):
-        frame = ScrollableFrame(self, ch=300, cw=585)
-
         btn = tk.Button(
-            frame.scrollable_frame,
-            text="Go Back",
-            command=lambda: master.switch_frame(Page3_BuyerShoppe),
+            self, text="Go Back", command=lambda: master.switch_frame(Page3_BuyerShoppe)
         )
         btn.config(bg="#1F8EE7", padx=3, fg="#E8E8E8", bd=0, activebackground="#3297E9")
         btn.grid(row=0, column=0, sticky="w")
 
         btn = tk.Button(
-            frame.scrollable_frame,
-            text="Logout",
-            command=lambda: Apptools.logout(self, master),
+            self, text="Logout", command=lambda: Apptools.logout(self, master)
         )
         btn.config(bg="#1F8EE7", padx=3, fg="#E8E8E8", bd=0, activebackground="#3297E9")
         btn.grid(row=0, column=3, sticky="e")
 
         Apptools.tkLabel(
-            frame.scrollable_frame,
-            "Recently Brought",
-            1,
-            0,
-            20,
-            "Segoe UI",
-            30,
-            10,
-            rs=1,
-            cs=4,
+            self, "Recently Brought", 1, 0, 20, "Segoe UI", 30, 10, rs=1, cs=4
         )
 
-        self.recentlybrought(frame.scrollable_frame)
+        self.recentlybrought(master)
 
-        frame.grid(row=0, column=0)
-
-    def recentlybrought(self, sframe):
+    def recentlybrought(self, master):
         rec = Apptools.defaultqueryrun(self, "trecord")
         query = "Select * from trecord where BuyerUsername=%s;"
         out = Apptools.sql_run(self, [query, (G_USERNAME.get(),)])
@@ -1952,48 +1910,25 @@ class Page4_BuyerRecentlyBrought(tk.Frame):
         if out is not None and rec:
             out = out[0]
             if out != []:
-                self.output(out, sframe)
+                column = (
+                    "Transaction Unique Id",
+                    "Transaction Id",
+                    "Date and Time",
+                    "Item name",
+                    "Quantity",
+                    "Amount Paid",
+                    "Buyer Name",
+                    "Seller Organisation",
+                )
+                Apptools.output(self, master, column, out, showLbl=False, sr=2, cssp=4)
             else:
                 messagebox.showinfo(
                     "No records found", "No Items Brought Recently\nStart Shopping"
                 )
 
                 Apptools.tkLabel(
-                    sframe, "Start Shopping", 2, 1, 15, "Segoe UI", 30, 10, rs=1, cs=1
+                    self, "Start Shopping", 2, 1, 15, "Segoe UI", 30, 10, rs=1, cs=1
                 )
-
-    def output(self, out, sframe):
-        column = (
-            "Transaction Unique Id",
-            "Transaction Id",
-            "Date and Time",
-            "Item name",
-            "Quantity",
-            "Amount Paid",
-            "Buyer Name",
-            "Seller Organisation",
-        )
-
-        listBox = ttk.Treeview(
-            sframe, selectmode="extended", columns=column, show="headings"
-        )
-
-        for i in range(len(column)):
-            listBox.heading(column[i], text=column[i])
-            listBox.column(column[i], minwidth=0)
-        for col in column:
-            listBox.heading(col, text=col)
-            listBox.column(col, width=tkFont.Font().measure(col.title()))
-        listBox.grid(row=2, column=1, sticky="we")
-
-        for i in out:
-            i = i[:-3]
-            listBox.insert("", "end", values=i)
-
-            for indx, val in enumerate(i):
-                ilen = tkFont.Font().measure(val)
-                if listBox.column(column[indx], width=None) < ilen:
-                    listBox.column(column[indx], width=ilen)
 
 
 class Page4_BuyerShopping(tk.Frame):
@@ -2548,11 +2483,9 @@ class Page7_BuyerPaymentProceed(tk.Frame):
         screen.iconphoto(False, Icon)
         screen.title("Payment Portal @Kans")
         screen.resizable(0, 0)
-
         Apptools.tkLabel(
             screen, "Payment Portal", 0, 1, 20, "Segoe UI", 30, 10, rs=1, cs=3
         )
-
         Apptools.tkLabel(
             screen,
             "Total Transaction Amount : ₹" + str(price) + "+₹5 (PG Charges)",
@@ -2565,12 +2498,9 @@ class Page7_BuyerPaymentProceed(tk.Frame):
             rs=1,
             cs=1,
         )
-
         Apptools.tkLabel(screen, "Enter PIN", 2, 1, 8, "Segoe UI", 20, 10, rs=1, cs=1)
-
         pin = tk.Entry(screen, fg="#E8E8E8", bg="#333333", show="*")
         pin.grid(row=2, column=2)
-
         btn = tk.Button(screen, text="Proceed")
         btn.config(
             command=lambda: self.checktrans(master, pin.get(), price, out, sframe)
@@ -2594,7 +2524,6 @@ class Page7_BuyerPaymentProceed(tk.Frame):
                     iqty = out[i][9]
                     selleruser = out[i][8]
                     iname = out[i][1]
-
                     ispremium = self.userdata()[2]
                     netbargain = self.bargain([out[i]], ispremium)
 
