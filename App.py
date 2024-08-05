@@ -52,7 +52,7 @@ DASHBOARDImgDir="Lighthouse.jpg"
 #Files in Directory CATEGORYCARDFOLDERNAME Var
 CATEGORYCARDFOLDERNAME="CardsShop"
 CATEGORYCARDImgDir=["Img1.jpg","Img2.jpg","Img3.jpg","Img4.jpg","Img5.jpg","Img6.jpg"]
-CATEGORYCARDImgDir+=["Img7.jpg","Img8.jpg","Img9.jpg"]
+CATEGORYCARDImgDir+=["Img7.jpg","Img8.jpg","Img9.jpg","Img10.jpg"]
 
 
 
