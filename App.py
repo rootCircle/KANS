@@ -4,7 +4,6 @@ Created on Tue Jan 12 18:17:14 2021
 Requirements:
     PIL library,mysql.connector,SQL DATABASE WITH localhost,user=root,password=password
     local image files
-Releases: Recently Brought,Transactions
 @author: compaq
 """
 
@@ -21,18 +20,36 @@ import os
 import errno
 from datetime import datetime
 
+
+"""
+Database and File saving Directories
+"""
 HOST="localhost"
 USERNAME="root"
 PASSWORD="password"
 DATABASE="Kans"
 savedir="C:\\Kans\\App\\ItemImage\\"
 
+
+"""
+Some Custom Variable(Not to be modified)
+"""
 savlocimgbtn=""
 itemtype=-1
 chooseditemdetails=[]
 
-#Username of Super Admin (All PG Charges transfers here from buying items)
-SUPERADMIN='1'
+"""
+Image Files Directories
+"""
+DEFAULTIMAGEDir="Additem.png"
+HOMEPAGEImgDir="logo.png"
+SIGNUPPAGEImgDir=["Part1.png","Part2.png"]
+DASHBOARDImgDir="Lighthouse.jpg"
+#Files in Directory CATEGORYCARDFOLDERNAME Var
+CATEGORYCARDFOLDERNAME="CardsShop"
+CATEGORYCARDImgDir=["Img1.jpg","Img2.png","Img3.jpg","Img4.jpg","Img5.png","Img6.png"]
+CATEGORYCARDImgDir+=["Img7.jpg","Img8.png","Img9.jpg"]
+
 
 
 class Apptools:
@@ -52,9 +69,9 @@ class Apptools:
 
         Example
         -------
-        >>> print(sql_run(None,'Select * from base;'))
+        >>> print(sql_run(None,['Select * from base;']))
         [[(1, 'a'), (2, 'B'), (3, 'C'), (4, 'D'), (5, 'D')]]
-        >>> print(sql_run(None,'Insert into base values(6,"d");'))
+        >>> print(sql_run(None,['Insert into base values(%s,%s);',(6,"d")]))
         [[]]
 
         Info
@@ -72,10 +89,19 @@ class Apptools:
             sql_connection = mysqlcon.connect(host=HOST,user=USERNAME,passwd=PASSWORD)
             cursor = sql_connection.cursor()
             sql_query=list(sql_query)
-            sql_query.insert(0, "Create database if not exists "+DATABASE+";")
-            sql_query.insert(1, "Use "+DATABASE+";")
-            for query in sql_query:
-                cursor.execute(query)
+            sql_query.insert(0, ["Create database if not exists "+DATABASE+";",()])
+            sql_query.insert(1, ["Use "+DATABASE+";",()])
+            for l in sql_query:
+                if isinstance(l,(list,tuple)):
+                    if len(l)==2:
+                        query,val=l
+                    else:
+                        query=l[0]
+                        val=()
+                else:
+                    query=l
+                    val=()
+                cursor.execute(query,val)
                 if query.upper().startswith(("SELECT","DESC")):
                     output.append(cursor.fetchall())
                 else:
@@ -84,9 +110,27 @@ class Apptools:
             cursor.close()
             return output[2:]
         except (mysqlcon.Error, mysqlcon.Warning) as error:
+
             if error.errno==2003:
                 ermsg="Failed to make a connection to the server."
                 messagebox.showerror(ermsg, "You are Offline!\n"+ermsg+"\nError Code : 2003")
+
+            elif error.errno==1045:
+                ermsg="Failed to make a connection to the server."
+                messagebox.showerror(ermsg, "Invalid Credential for Database\nRequires Database Configuration.")
+                user=simpledialog.askstring("Input","Enter Database Username",parent=self)
+                pswd=simpledialog.askstring("Input","Enter Database Password",parent=self)
+                if user is not None and pswd is not None:
+                    globals()['USERNAME']=user
+                    globals()['PASSWORD']=pswd
+                    messagebox.showinfo("Success","Retry to see if credentials are correct or not.")
+            elif error.errno==2005:
+                ermsg="Failed to make a connection to the server."
+                messagebox.showerror(ermsg, "Invalid Credential for Database\nRequires Database Configuration.")
+                host=simpledialog.askstring("Input","Enter Database Hostname",parent=self)
+                if host is not None:
+                    globals()['HOST']=host
+                    messagebox.showinfo("Success","Retry to see if credentials are correct or not.")
             else:
                 messagebox.showerror("Error", error)
         finally:
@@ -98,7 +142,7 @@ class Apptools:
             Photo = Image.open(Dir)
         except Exception as e:
             print(e)
-            Photo = Image.open("Additem.jpg")
+            Photo = Image.open(DEFAULTIMAGEDir)
         Photo = Photo.resize((width, height))
         render = ImageTk.PhotoImage(Photo)
         img = tk.Label(self, image=render)
@@ -145,8 +189,15 @@ class Apptools:
                 imgbtn.image = render
                 globals()['savlocimgbtn']=save_location
             except Exception as e:
-                print(e)
-                Apptools.save_img(self,"",filename="Additem.png")
+                if e.errno==2:
+                    msg="Unable to find {} Drive".format(savedir[:2])
+                    globals()['savedir']=os.getcwd()[:2]+savedir[2:]
+
+                    messagebox.showinfo(msg,"Switching to Current Working Directory Drive.")
+                    Apptools.save_img(self,xdiry,filename)
+                else:
+                    print(e)
+                    Apptools.save_img(self,"",filename=DEFAULTIMAGEDir)
 
 
     def imgnamegenerator(self,extension):
@@ -171,7 +222,7 @@ class Apptools:
             imgbtn.grid(row = irow,column=icolumn,padx=10,pady=10)
         except Exception as e:
             print(e)
-            Apptools.imgsavebtn(self,"Additem.png",width,height,irow,icolumn)
+            Apptools.imgsavebtn(self,DEFAULTIMAGEDir,width,height,irow,icolumn)
 
     def defaultqueryrun(self,table):
         table=table.lower()
@@ -218,7 +269,7 @@ class Apptools:
             def_query = """Create table IF NOT exists walletbank(
             WalNo varchar(8) NOT NULL primary KEY,
             UserType char(1) NOT NULL,
-            Amt int NOT NULL,
+            Amt DECIMAL(20,2) NOT NULL,
             PIN INT NOT NULL);"""
 
         elif table=="tempbank":
@@ -234,7 +285,7 @@ class Apptools:
         elif table=="items":
             def_query="""Create table IF NOT EXISTS items(
             itemno int PRIMARY KEY,
-            iname varchar(32) NOT NULL,
+            iname varchar(64) NOT NULL,
             iwhp int NOT NULL,
             irp int NOT NULL,
             idesc varchar(250) NOT NULL,
@@ -261,9 +312,12 @@ class Apptools:
             tuid varchar(8) PRIMARY KEY,
             tid varchar(8) ,
             tdate datetime NOT NULL,
-            titemno int NOT NULL,
+            iname varchar(64) NOT NULL,
             tqty int NOT NULL,
-            tpaidamt int NOT NULL,
+            tpaidamt DECIMAL(20,2) NOT NULL,
+            BuyerName varchar(50) NOT NULL,
+            SellerOrg varchar(64) NOT NULL,
+            titemno int NOT NULL,
             BuyerUsername varchar(32) NOT NULL,
             SellerUsername varchar(32) NOT NULL);"""
         else:
@@ -280,13 +334,10 @@ class Apptools:
         if rec:
             query="Insert into {0} values(".format(table)
             for val in values:
-                if isinstance(val,int) or isinstance(val,float):
-                    query+=str(val)+","
-                else:
-                    query+="'"+val+"',"
+                query+="%s,"
             query=query[:len(query)-1]+");"
 
-            rec2=Apptools.sql_run(self,query)
+            rec2=Apptools.sql_run(self,[query,values])
             return rec2
 
     def is_not_null(self, *text):
@@ -372,8 +423,13 @@ class Apptools:
     def checkBalance(self,walno,pin):
         rec=Apptools.defaultqueryrun(self,"walletbank")
         if rec:
-            query = "Select Amt from walletbank where walno='"+walno+"' and pin="+str(pin)+";"
-            bal=Apptools.sql_run(self,query)[0][0][0]
+            query = "Select Amt from walletbank where walno=%s and pin=%s;"
+            out=Apptools.sql_run(self,[query,(walno,pin)])
+            if out and out[0]:
+                bal=out[0][0][0]
+            else:
+                bal=0
+                print("Error retrieving balance")
             #It return integer not string
             return bal
 
@@ -446,8 +502,8 @@ class Apptools:
             key,seq=Apptools.keyencoder(self, walno, bal)
             rec=Apptools.insertSQL(self,"tempbank",key,int(seq))
             if rec:
-                query_2="Update walletbank set amt=amt-"+str(bal)+" where walno = '"+walno+"';"
-                rec2=Apptools.sql_run(self,query_2)
+                query_2="Update walletbank set amt=amt-%s where walno = %s;"
+                rec2=Apptools.sql_run(self,[query_2,(bal,walno)])
                 if rec2:
                     return key
         else:
@@ -461,7 +517,16 @@ class Apptools:
             out=out[0]
             for i in range(len(out)):
                 out[i]=out[i][0]
-
+            try:
+                os.makedirs(savedir)
+            except OSError as e:
+                if e.errno != errno.EEXIST:
+                    if os.system('cd '+savedir[:2])!=0:
+                        msg="Unable to find {} Drive".format(savedir[:2])
+                        globals()['savedir']=os.getcwd()[:2]+savedir[2:]
+                        messagebox.showinfo(msg,"Switching to Current Working Directory Drive.")
+                    else:
+                        print(e)
             onlyfiles = [savedir+f for f in os.listdir(savedir) if os.path.isfile(os.path.join(savedir, f))]
             dup=list(onlyfiles)
             for l in dup:
@@ -535,7 +600,7 @@ class Homepage(tk.Frame):
         self.makeWidgets(master)
 
     def makeWidgets(self, master):
-        Apptools.image_Show(self, "logo.png", 0, 0, 300, 450,rspan=10)
+        Apptools.image_Show(self, HOMEPAGEImgDir, 0, 0, 300, 450,rspan=10)
 
         lbl=tk.Label(self,text="Welcome to\nKans")
         lbl.config(font=("Chiller", 30),fg="#E8E8E8",bg="#333333")
@@ -662,9 +727,9 @@ class Page2_SignupAdmin(tk.Frame):
         self.makeWidgets(master)
 
     def makeWidgets(self, master):
-        Apptools.image_Show(self, "Part1.png", 0, 0, 100, 650,rspan=15)
+        Apptools.image_Show(self, SIGNUPPAGEImgDir[0], 0, 0, 100, 650,rspan=15)
 
-        Apptools.image_Show(self, "Part2.png", 0, 4, 100, 650,rspan=15)
+        Apptools.image_Show(self, SIGNUPPAGEImgDir[1], 0, 4, 100, 650,rspan=15)
 
         lbl = tk.Label(self, text="Kans")
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
@@ -752,11 +817,11 @@ class Page2_SignupAdmin(tk.Frame):
     def RegisterAdmin(self,master,name,age,gender,mobno,user,pswd,repass,pin):
         if pswd == repass:
             rec=Apptools.defaultqueryrun(self, "logindataadmin")
-            query_2 = "select id from logindataadmin where username = '" + user + "';"
-            query_3 = "select id from logindataadmin where mobno = '" + mobno + "';"
+            query_2 = "select id from logindataadmin where username = %s;"
+            query_3 = "select id from logindataadmin where mobno = %s;"
             if rec:
-                out = Apptools.sql_run(self, query_2,query_3)
-                cond1=Apptools.in_limit(self,10**9,10**10,mobno)
+                out = Apptools.sql_run(self, [query_2,(user,)],[query_3,(mobno,)])
+                cond1=Apptools.in_limit(self,10**9,10**10-1,mobno)
                 cond2=Apptools.in_limit(self, 0, 150, age)
                 cond3=Apptools.check_digit(self, age, pin,mobno)
                 cond4=mobno.find(".")==-1 and mobno.find("-")==-1
@@ -780,12 +845,17 @@ class Page2_SignupAdmin(tk.Frame):
                     else:
                         if out[0]!=[]:
                             messagebox.showinfo("Sorry! Username already taken", "Try a different username")
-                        if out[1]!=[]:
+                        elif out[1]!=[]:
                             messagebox.showinfo("Sorry! Mobile number is already taken", "Try a different mobile number")
                 else:
-                    messagebox.showinfo("Invalid entry", "Fill all the entry correctly to proceed")
+                    if not(cond1):
+                        messagebox.showinfo("Invalid entry", "Enter Valid 10-digit Mobile Number")
+                    elif not(cond2):
+                        messagebox.showinfo("Invalid entry", "Enter Valid Age (0~150 year)")
+                    else:
+                        messagebox.showinfo("Invalid entry", "Fill all the entry correctly to proceed")
         else:
-            messagebox.showwarning("Password Mismatch", "Re-enter Password")
+            messagebox.showwarning("Password Mismatch", "Password Mismatch\nRe-enter Password")
 
 class Page2_SignupBuyer(tk.Frame):
     def __init__(self, master):
@@ -793,9 +863,9 @@ class Page2_SignupBuyer(tk.Frame):
         self.makeWidgets(master)
 
     def makeWidgets(self, master):
-        Apptools.image_Show(self, "Part1.png", 0, 0, 100, 650,rspan=16)
+        Apptools.image_Show(self, SIGNUPPAGEImgDir[0], 0, 0, 100, 650,rspan=16)
 
-        Apptools.image_Show(self, "Part2.png", 0, 4, 100, 650,rspan=16)
+        Apptools.image_Show(self, SIGNUPPAGEImgDir[1], 0, 4, 100, 650,rspan=16)
 
         lbl = tk.Label(self, text="Kans")
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
@@ -891,12 +961,12 @@ class Page2_SignupBuyer(tk.Frame):
     def RegisterBuyer(self,master,name,age,gender,mobno,user,pswd,repass,pin,DelAdd):
         if pswd == repass:
             rec=Apptools.defaultqueryrun(self, "logindatabuyer")
-            query_2 = "select id from logindatabuyer where username = '" + user + "';"
-            query_3 = "select id from logindatabuyer where mobno = '" + mobno + "';"
+            query_2 = "select id from logindatabuyer where username = %s;"
+            query_3 = "select id from logindatabuyer where mobno = %s;"
 
             if rec:
-                out = Apptools.sql_run(self, query_2,query_3)
-                cond1=Apptools.in_limit(self,10**9,10**10,mobno)
+                out = Apptools.sql_run(self, [query_2,(user,)],[query_3,(mobno,)])
+                cond1=Apptools.in_limit(self,10**9,10**10-1,mobno)
                 cond2=Apptools.in_limit(self, 0, 150, age)
                 cond3=Apptools.check_digit(self, age, pin,mobno)
                 cond4=mobno.find(".")==-1 and mobno.find("-")==-1
@@ -920,12 +990,17 @@ class Page2_SignupBuyer(tk.Frame):
                     else:
                         if out[0]!=[]:
                             messagebox.showinfo("Sorry! Username already taken", "Try a different username")
-                        if out[1]!=[]:
+                        elif out[1]!=[]:
                             messagebox.showinfo("Sorry! Mobile number is already taken", "Try a different mobile number")
                 else:
-                    messagebox.showinfo("Invalid entry", "Fill all the entry correctly to proceed")
+                    if not(cond1):
+                        messagebox.showinfo("Invalid entry", "Enter Valid 10-digit Mobile Number")
+                    elif not(cond2):
+                        messagebox.showinfo("Invalid entry", "Enter Valid Age (0~150 year)")
+                    else:
+                        messagebox.showinfo("Invalid entry", "Fill all the entry correctly to proceed")
         else:
-            messagebox.showwarning("Password Mismatch", "Re-enter Password")
+            messagebox.showwarning("Password Mismatch", "Password Mismatch\nRe-enter Password")
 
 
 
@@ -935,9 +1010,9 @@ class Page2_SignupSeller(tk.Frame):
         self.makeWidgets(master)
 
     def makeWidgets(self, master):
-        Apptools.image_Show(self, "Part1.png", 0, 0, 100, 650,rspan=17)
+        Apptools.image_Show(self, SIGNUPPAGEImgDir[0], 0, 0, 100, 650,rspan=17)
 
-        Apptools.image_Show(self, "Part2.png", 0, 4, 100, 650,rspan=17)
+        Apptools.image_Show(self, SIGNUPPAGEImgDir[1], 0, 4, 100, 650,rspan=17)
 
         lbl = tk.Label(self, text="Kans")
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
@@ -1040,12 +1115,12 @@ class Page2_SignupSeller(tk.Frame):
     def RegisterSeller(self,master,name,age,gender,mobno,user,pswd,repass,pin,OrgName,OrgAdd):
         if pswd == repass:
             rec=Apptools.defaultqueryrun(self, "logindataseller")
-            query_2 = "select id from logindataseller where username = '" + user + "';"
-            query_3 = "select id from logindataseller where mobno = '" + mobno + "';"
+            query_2 = "select id from logindataseller where username = %s;"
+            query_3 = "select id from logindataseller where mobno = %s;"
 
             if rec:
-                out = Apptools.sql_run(self, query_2,query_3)
-                cond1=Apptools.in_limit(self,10**9,10**10,mobno)
+                out = Apptools.sql_run(self, [query_2,(user,)],[query_3,(mobno,)])
+                cond1=Apptools.in_limit(self,10**9,10**10-1,mobno)
                 cond2=Apptools.in_limit(self, 0, 150, age)
                 cond3=Apptools.check_digit(self, age, pin,mobno)
                 cond4=mobno.find(".")==-1 and mobno.find("-")==-1
@@ -1069,12 +1144,17 @@ class Page2_SignupSeller(tk.Frame):
                     else:
                         if out[0]!=[]:
                             messagebox.showinfo("Sorry! Username already taken", "Try a different username")
-                        if out[1]!=[]:
+                        elif out[1]!=[]:
                             messagebox.showinfo("Sorry! Mobile number is already taken", "Try a different mobile number")
                 else:
-                    messagebox.showinfo("Invalid entry", "Fill all the entry correctly to proceed")
+                    if not(cond1):
+                        messagebox.showinfo("Invalid entry", "Enter Valid 10-digit Mobile Number")
+                    elif not(cond2):
+                        messagebox.showinfo("Invalid entry", "Enter Valid Age (0~150 year)")
+                    else:
+                        messagebox.showinfo("Invalid entry", "Fill all the entry correctly to proceed")
         else:
-            messagebox.showwarning("Password Mismatch", "Re-enter Password")
+            messagebox.showwarning("Password Mismatch", "Password Mismatch\nRe-enter Password")
 
 class Page3_DashboardAdmin(tk.Frame):
     def __init__(self, master):
@@ -1093,7 +1173,7 @@ class Page3_DashboardAdmin(tk.Frame):
         lbl.config(font=("Segoe Print", 20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=0,pady=20)
 
-        Apptools.image_Show(self, "Lighthouse.jpg", 3, 0, 300, 200)
+        Apptools.image_Show(self, DASHBOARDImgDir, 3, 0, 300, 200)
 
         btn=tk.Button(self,text="Profile",command=lambda: master.switch_frame(Page3_AdminProfileManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
@@ -1126,7 +1206,7 @@ class Page3_DashboardSeller(tk.Frame):
         lbl.config(font=("Segoe Print", 20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=0,pady=20)
 
-        Apptools.image_Show(self, "Lighthouse.jpg", 3, 0, 300, 200)
+        Apptools.image_Show(self, DASHBOARDImgDir, 3, 0, 300, 200)
 
         btn=tk.Button(self,text="Profile",command=lambda: master.switch_frame(Page3_SellerProfileManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
@@ -1161,7 +1241,7 @@ class Page3_DashboardBuyer(tk.Frame):
         lbl.config(font=("Segoe Print", 20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=0,pady=20)
 
-        Apptools.image_Show(self, "Lighthouse.jpg", 3, 0, 300, 200)
+        Apptools.image_Show(self, DASHBOARDImgDir, 3, 0, 300, 200)
 
         btn=tk.Button(self,text="Profile Management",command=lambda: master.switch_frame(Page3_BuyerProfileManagement))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
@@ -1204,7 +1284,7 @@ class Page3_AdminProfileManagement(tk.Frame):
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1)
 
-        Apptools.image_Show(self, "Lighthouse.jpg", 3, 1, 200, 150)
+        Apptools.image_Show(self, DASHBOARDImgDir, 3, 1, 200, 150)
 
         btn=tk.Button(self,text="Show Profile",command=lambda: master.switch_frame(Page4_AdminShowProfile))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
@@ -1244,7 +1324,7 @@ class Page3_AdminWalletManagement(tk.Frame):
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1)
 
-        Apptools.image_Show(self, "Lighthouse.jpg", 3, 1, 200, 150)
+        Apptools.image_Show(self, DASHBOARDImgDir, 3, 1, 200, 150)
 
         btn=tk.Button(self,text="Cashout Money",command=lambda: master.switch_frame(Page4_AdminCashout))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
@@ -1283,7 +1363,7 @@ class Page3_SellerProfileManagement(tk.Frame):
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1)
 
-        Apptools.image_Show(self, "Lighthouse.jpg", 3, 1, 200, 150)
+        Apptools.image_Show(self, DASHBOARDImgDir, 3, 1, 200, 150)
 
         btn=tk.Button(self,text="Show Profile",command=lambda: master.switch_frame(Page4_SellerShowProfile))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
@@ -1320,7 +1400,7 @@ class Page3_SellerWalletManagement(tk.Frame):
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1)
 
-        Apptools.image_Show(self, "Lighthouse.jpg", 3, 1, 200, 150)
+        Apptools.image_Show(self, DASHBOARDImgDir, 3, 1, 200, 150)
 
         btn=tk.Button(self,text="Check Balance",command=lambda: master.switch_frame(Page4_SellerCheckBalance))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
@@ -1357,7 +1437,7 @@ class Page3_SellerItemManagement(tk.Frame):
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1)
 
-        Apptools.image_Show(self, "Lighthouse.jpg", 3, 1, 200, 150)
+        Apptools.image_Show(self, DASHBOARDImgDir, 3, 1, 200, 150)
 
         btn=tk.Button(self,text="Add Items",command=lambda: master.switch_frame(Page4_SellerAddItems))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
@@ -1404,7 +1484,7 @@ class Page3_BuyerProfileManagement(tk.Frame):
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1)
 
-        Apptools.image_Show(self, "Lighthouse.jpg", 3, 1, 200, 150)
+        Apptools.image_Show(self, DASHBOARDImgDir, 3, 1, 200, 150)
 
         btn=tk.Button(self,text="Show Profile",command=lambda: master.switch_frame(Page4_BuyerShowProfile))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
@@ -1446,8 +1526,7 @@ class Page3_BuyerPremium(tk.Frame):
 
         txt='''Get Enjoying Benefits like
         Free Delivery
-        Exclusive Bargains
-        No Transaction Charge on Payments'''
+        Exclusive Bargains and a lot more.'''
         lbl = tk.Label(self, text=txt)
         lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=3, column=1,pady=10)
@@ -1469,26 +1548,26 @@ class Page3_BuyerPremium(tk.Frame):
 
     def CheckIsPremium(self):
         rec=Apptools.defaultqueryrun(self, "logindatabuyer")
-        query_2 = "select ispremium from logindatabuyer where username = '" + G_USERNAME.get() + "';"
+        query_2 = "select ispremium from logindatabuyer where username = %s;"
         if rec:
-            out=Apptools.sql_run(self, query_2)[0][0][0]
+            out=Apptools.sql_run(self, [query_2,(G_USERNAME.get(),)])[0][0][0]
             if out.lower()=='y':
                 return True
         return False
 
     def getmembership(self,master):
         rec=Apptools.defaultqueryrun(self, "logindatabuyer")
-        query_2 = "Select WalNo from logindatabuyer where username='"+G_USERNAME.get()+"';"
-        query_3 = "Update logindatabuyer set isPremium='Y' where username = '" + G_USERNAME.get() + "';"
+        query_2 = "Select WalNo from logindatabuyer where username=%s;"
+        query_3 = "Update logindatabuyer set isPremium='Y' where username = %s;"
 
         if rec:
-            Walno=Apptools.sql_run(self, query_2)[0][0][0]
+            Walno=Apptools.sql_run(self, [query_2,(G_USERNAME.get(),)])[0][0][0]
             out = Apptools.checkBalance(self,Walno,G_PIN.get())
             if out is not None and out>=100:
-                query_4 = "Update walletbank set amt=amt-100 where WalNo='"+Walno+"';"
-                rec2=Apptools.sql_run(self, query_4)
+                query_4 = "Update walletbank set amt=amt-100 where WalNo=%s;"
+                rec2=Apptools.sql_run(self, [query_4,(Walno,)])
                 if rec2:
-                    rec3=Apptools.sql_run(self, query_3)
+                    rec3=Apptools.sql_run(self, [query_3,(G_USERNAME.get(),)])
                     if rec3 is not None:
                         messagebox.showinfo("You are now a premium member","Get exclusive discount and benefits.\nStart Shooping")
                         master.switch_frame(Page3_DashboardBuyer)
@@ -1520,7 +1599,7 @@ class Page3_BuyerShoppe(tk.Frame):
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1)
 
-        Apptools.image_Show(self, "Lighthouse.jpg", 3, 1, 200, 150)
+        Apptools.image_Show(self, DASHBOARDImgDir, 3, 1, 200, 150)
 
         btn=tk.Button(self,text="Start Shopping",command=lambda: master.switch_frame(Page4_BuyerShopping))
         btn.config(bg="#1F8EE7",fg="#E8E8E8",bd=0,activebackground="#3297E9")
@@ -1561,7 +1640,7 @@ class Page3_BuyerWallet(tk.Frame):
         lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=2, column=1)
 
-        Apptools.image_Show(self, "Lighthouse.jpg", 3, 1, 200, 150)
+        Apptools.image_Show(self, DASHBOARDImgDir, 3, 1, 200, 150)
 
         btn=tk.Button(self,text="Check Balance",command=lambda: master.switch_frame(Page4_BuyerCheckBalance))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
@@ -1593,8 +1672,8 @@ class Page4_AdminShowProfile(tk.Frame):
         lbl.grid(row=1, column=1,padx=20,pady=10,columnspan=2)
 
         Fieldname=["Name","Age","Gender","Mobile No."]
-        query="select Name,age,Gender,MobNo from logindataadmin where username='"+G_USERNAME.get()+"';"
-        out=Apptools.sql_run(self, query)
+        query="select Name,age,Gender,MobNo from logindataadmin where username=%s;"
+        out=Apptools.sql_run(self, [query,(G_USERNAME.get(),)])
         if out:
             out=list(out[0][0])
             if out[2] == "M":
@@ -1631,8 +1710,8 @@ class Page4_AdminEditProfile(tk.Frame):
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=3,padx=20,pady=10)
 
-        query="select Name,age,MobNo,Gender from logindataadmin where username='"+G_USERNAME.get()+"';"
-        out = Apptools.sql_run(self, query)
+        query="select Name,age,MobNo,Gender from logindataadmin where username=%s;"
+        out = Apptools.sql_run(self, [query,(G_USERNAME.get(),)])
 
         data=["" for i in range(4)]
         if out:
@@ -1669,18 +1748,18 @@ class Page4_AdminEditProfile(tk.Frame):
         btn.grid(row=8, column=3,pady=10)
 
     def modifyProfile(self,master,name,age,gender,mobno):
-        cond1=Apptools.in_limit(self,10**9,10**10,mobno)
+        cond1=Apptools.in_limit(self,10**9,10**10-1,mobno)
         cond2=Apptools.in_limit(self, 0, 150, age)
         cond3=Apptools.check_digit(self, age,mobno)
         cond4=mobno.find(".")==-1 and mobno.find("-")==-1
         cond5=Apptools.is_not_null(self, name, age, gender,mobno)
         if cond1 and cond2 and cond3 and cond4 and cond5:
-            query="select username from logindataadmin where mobno = '" + mobno + "';"
-            query_2 = "Update logindataadmin Set Name='"+name+"',age="+age+",MobNo="+mobno+",Gender='"+gender+"' where username='"+G_USERNAME.get()+"';"
-            out=Apptools.sql_run(self, query)
+            query="select username from logindataadmin where mobno = %s;"
+            query_2 = "Update logindataadmin Set Name=%s,age=%s,MobNo=%s,Gender=%s where username=%s;"
+            out=Apptools.sql_run(self, [query,(mobno,)])
             l=len(out[0])
             if out and (l==0 or (l==1 and out[0][0][0]==G_USERNAME.get())):
-                rec=Apptools.sql_run(self, query_2)
+                rec=Apptools.sql_run(self, [query_2,(name,age,mobno,gender,G_USERNAME.get())])
                 if rec is not None:
                     G_NAME.set("Welcome " + name)
                     messagebox.showinfo("Success!", "Profile updated successfully")
@@ -1688,7 +1767,12 @@ class Page4_AdminEditProfile(tk.Frame):
             elif out is not None:
                 messagebox.showwarning("Sorry! Mobile number is already taken", "Try a different mobile number")
         else:
-            messagebox.showwarning("Error", "Fill all form(s) correctly to continue")
+            if not(cond1):
+                messagebox.showinfo("Invalid entry", "Enter Valid 10-digit Mobile Number")
+            elif not(cond2):
+                messagebox.showinfo("Invalid entry", "Enter Valid Age (0~150 year)")
+            else:
+                messagebox.showinfo("Invalid entry", "Fill all the entry correctly to proceed")
 
 class Page4_AdminCheckBalance(tk.Frame):
     def __init__(self, master):
@@ -1722,8 +1806,8 @@ class Page4_AdminCheckBalance(tk.Frame):
 
     def checkBal(self,pin):
         if pin==G_PIN.get():
-            query="select walno from logindataadmin where username='"+G_USERNAME.get()+"';"
-            out=Apptools.sql_run(self, query)
+            query="select walno from logindataadmin where username=%s;"
+            out=Apptools.sql_run(self, [query,(G_USERNAME.get(),)])
             if out is not None:
                 if out[0]!=[]:
                     walno=out[0][0][0]
@@ -1777,8 +1861,8 @@ class Page4_AdminDeleteAccount(tk.Frame):
 
     def checkDel(self,master,pin):
         if pin==G_PIN.get():
-            query="select walno from logindataadmin where username='"+G_USERNAME.get()+"';"
-            out=Apptools.sql_run(self, query)
+            query="select walno from logindataadmin where username=%s;"
+            out=Apptools.sql_run(self, [query,(G_USERNAME.get(),)])
             if out is not None:
                 if out[0]!=[]:
                     walno=out[0][0][0]
@@ -1789,8 +1873,8 @@ class Page4_AdminDeleteAccount(tk.Frame):
                         noofadmin=rec3[0][0][0]
                         if noofadmin>1:
                             if bal==0:
-                                query_3="Select bal from cashinhandadmin where username='"+G_USERNAME.get()+"';"
-                                out2=Apptools.sql_run(self, query_3)
+                                query_3="Select bal from cashinhandadmin where username=%s;"
+                                out2=Apptools.sql_run(self, [query_3,(G_USERNAME.get(),)])
                                 if out2 is not None:
                                     if out2[0]!=[]:
                                         cash=out2[0][0][0]
@@ -1800,10 +1884,10 @@ class Page4_AdminDeleteAccount(tk.Frame):
                                 else:
                                     choice = messagebox.askyesno("Alert", "Are you sure want to delete your account?")
                                     if choice:
-                                        del_query1="Delete from logindataadmin where username = '" + G_USERNAME.get() + "';"
-                                        del_query2="Delete from walletbank where walno = '" + walno + "';"
-                                        del_query3="Delete from cashinhandadmin where username='"+G_USERNAME.get()+"';"
-                                        rec=Apptools.sql_run(self,del_query1,del_query2,del_query3)
+                                        del_query1="Delete from logindataadmin where username = %s;"
+                                        del_query2="Delete from walletbank where walno = %s;"
+                                        del_query3="Delete from cashinhandadmin where username=%s;"
+                                        rec=Apptools.sql_run(self,[del_query1,(G_USERNAME.get(),)],[del_query2,(walno,)],[del_query3,(G_USERNAME.get(),)])
                                         if rec:
                                             messagebox.showinfo("Success", "Account Deleted Successfully")
                                             Apptools.logout(self,master)
@@ -1890,38 +1974,38 @@ class Page4_AdminCashout(tk.Frame):
         cond3=len(key)==16
         cond4=Apptools.check_digit(self,amt)
         if cond1 and cond4 and cond2 and cond3:
-            query="select walno from logindata"+usertype+" where username='"+user+"';"
-            out=Apptools.sql_run(self, query)
+            query="select walno from logindata"+usertype+" where username=%s;"
+            out=Apptools.sql_run(self, [query,(user,)])
             if out is not None:
                 if out[0]!=[]:
                     walno=out[0][0][0]
 
                     rec=Apptools.defaultqueryrun(self,"tempbank")
-                    query="Select encode from tempbank where seccode='"+key+"';"
-                    out=Apptools.sql_run(self,query)
+                    query="Select encode from tempbank where seccode=%s;"
+                    out=Apptools.sql_run(self,[query,(key,)])
                     if out is not None and rec:
                         if out[0]!=[]:
                             seq=out[0][0][0]
                             kwal,kbal=Apptools.keydecoder(self,key,seq)
                             if kwal==walno and amt==str(kbal):
-                                query_2="select walno from logindataadmin where username='"+G_USERNAME.get()+"';"
-                                out2=Apptools.sql_run(self,query_2)
+                                query_2="select walno from logindataadmin where username=%s;"
+                                out2=Apptools.sql_run(self,[query_2,(G_USERNAME.get(),)])
                                 if out2 is not None:
                                     if out2[0]!=[]:
                                         admwalno=out2[0][0][0]
                                         if admwalno != walno:
-                                            query_3="Update walletbank set amt=amt+5 where walno = '"+admwalno+"';"
-                                            query_4="Update cashinhandadmin set bal=bal-"+str(kbal-5)+" where username='"+G_USERNAME.get()+"';"
-                                            rec2=Apptools.sql_run(self,query_3,query_4)
+                                            query_3="Update walletbank set amt=amt+5 where walno = %s;"
+                                            query_4="Update cashinhandadmin set bal=bal-%s where username=%s;"
+                                            rec2=Apptools.sql_run(self,[query_3,(admwalno,)],[query_4,(kbal-5,G_USERNAME.get())])
                                             if rec2 is not None:
-                                                query_4="delete from tempbank where seccode='"+key+"';"
-                                                rec3=Apptools.sql_run(self,query_4)
+                                                query_4="delete from tempbank where seccode=%s;"
+                                                rec3=Apptools.sql_run(self,[query_4,(key,)])
                                                 if rec3:
                                                     messagebox.showinfo("Success!","Cashout Successful")
 
                                                     lbl = tk.Label(self, text="Withdrawl Amount : "+amt+"\nAmount to be Paid : "+str(kbal-5)+"\nPG & Service Charges : 5")
                                                     lbl.config(font=("Chiller", 30), fg="#E8E8E8", bg="#333333")
-                                                    lbl.grid(row=9, column=2,padx=5,pady=10)
+                                                    lbl.grid(row=9, column=1,columnspan=3,padx=5,pady=10)
                                         else:
                                             messagebox.showerror("Cashout not possible!","You can take cashout of your own personal account")
                                     else:
@@ -1933,7 +2017,12 @@ class Page4_AdminCashout(tk.Frame):
                 else:
                     messagebox.showerror("No such user exists!","Try entering correct username/details")
         else:
-            messagebox.showwarning("Invalid Information","Try entering valid information")
+            if not(cond2):
+                messagebox.showinfo("Invalid entry", "Enter Valid Amount (0~10^7)")
+            elif not(cond3):
+                messagebox.showinfo("Invalid entry", "Enter Valid Key of length = 16")
+            else:
+                messagebox.showinfo("Invalid entry", "Fill all the entry correctly to proceed")
 
 
 class Page4_AdminSelfCashoutRequest(tk.Frame):
@@ -1974,8 +2063,8 @@ class Page4_AdminSelfCashoutRequest(tk.Frame):
 
     def AdmSelfcashout(self,master,pin):
         if pin==G_PIN.get():
-            query="select walno from logindataadmin where username='"+G_USERNAME.get()+"';"
-            out=Apptools.sql_run(self, query)
+            query="select walno from logindataadmin where username=%s;"
+            out=Apptools.sql_run(self, [query,(G_USERNAME.get(),)])
             if out is not None:
                 if out[0]!=[]:
                     walno=out[0][0][0]
@@ -2070,8 +2159,8 @@ class Page4_AdminTopupWallet(tk.Frame):
             cond2=Apptools.in_limit(self,5,10**7,amt)
             cond3=Apptools.check_digit(self,amt)
             if cond1 and cond3 and cond2:
-                query="select name,walno from logindata"+usertype+" where username='"+username+"';"
-                out=Apptools.sql_run(self, query)
+                query="select name,walno from logindata"+usertype+" where username=%s;"
+                out=Apptools.sql_run(self, [query,(username,)])
                 if out is not None:
                     if out[0]!=[]:
                         walno=out[0][0][1]
@@ -2079,16 +2168,16 @@ class Page4_AdminTopupWallet(tk.Frame):
                         netamt=str(int(amt)-5)
                         choice = messagebox.askyesno("Sure", "Are you sure want to recharge the wallet of user "+name+" with Rs. "+netamt+"?\nPG & Other Charge = Rs. 5")
                         if choice:
-                            query_2="Update walletbank set amt=amt+"+netamt+" where walno = '"+walno+"';"
-                            query_3="select walno from logindataadmin where username='"+G_USERNAME.get()+"';"
-                            out2=Apptools.sql_run(self,query_3)
+                            query_2="Update walletbank set amt=amt+%s where walno = %s;"
+                            query_31="select walno from logindataadmin where username=%s;"
+                            out2=Apptools.sql_run(self,[query_31,(G_USERNAME.get(),)])
                             if out2 is not None:
                                 if out2[0]!=[]:
                                     admwalno=out2[0][0][0]
                                     if admwalno != walno:
-                                        query_3="Update walletbank set amt=amt+5 where walno = '"+admwalno+"';"
-                                        query_4="Update cashinhandadmin set bal=bal+"+amt+" where username='"+G_USERNAME.get()+"';"
-                                        rec=Apptools.sql_run(self,query_2,query_3,query_4)
+                                        query_3="Update walletbank set amt=amt+5 where walno = %s;"
+                                        query_4="Update cashinhandadmin set bal=bal+%s where username=%s;"
+                                        rec=Apptools.sql_run(self,[query_2,(netamt,walno)],[query_3,(admwalno,)],[query_4,(amt,G_USERNAME.get())])
                                         if rec is not None:
                                             messagebox.showinfo("Transaction successful!","Transferred Rs. "+netamt+" to user "+name+" Successfully\nAsk user to check his account")
                                             msg="Transaction Receipt\nName : {0}\nNet Amount Recharged : {1}\nPG & Other Charge : 5\nCash Given by user : {2}".format(name,netamt,amt).strip()
@@ -2102,7 +2191,10 @@ class Page4_AdminTopupWallet(tk.Frame):
                     else:
                         messagebox.showerror("No such user exists!","Try entering correct username/details")
             else:
-                messagebox.showwarning("Invalid Information","Try entering valid information")
+                if not(cond2):
+                    messagebox.showinfo("Invalid entry", "Enter Valid Amount (5~10^7)")
+                else:
+                    messagebox.showinfo("Invalid entry", "Fill all the entry correctly to proceed")
         else:
             messagebox.showwarning("Incorrect PIN","Try entering correct PIN")
 
@@ -2205,8 +2297,8 @@ class Page4_SellerShowProfile(tk.Frame):
         lbl.grid(row=1, column=1,columnspan=2,padx=60,pady=10)
 
         Fieldname=["Name","Age","Gender","Mobile No.","Name of Organisation","Address of Organisation"]
-        query="select Name,age,Gender,MobNo,orgName,AddOrg from logindataseller where username='"+G_USERNAME.get()+"';"
-        out=Apptools.sql_run(self, query)
+        query="select Name,age,Gender,MobNo,orgName,AddOrg from logindataseller where username=%s;"
+        out=Apptools.sql_run(self, [query,(G_USERNAME.get(),)])
         if out:
             out=list(out[0][0])
             if out[2] == "M":
@@ -2242,8 +2334,8 @@ class Page4_SellerEditProfile(tk.Frame):
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=3,padx=20,pady=10)
 
-        query="select Name,age,MobNo,orgName,AddOrg,Gender from logindataseller where username='"+G_USERNAME.get()+"';"
-        out = Apptools.sql_run(self, query)
+        query="select Name,age,MobNo,orgName,AddOrg,Gender from logindataseller where username=%s;"
+        out = Apptools.sql_run(self, [query,(G_USERNAME.get(),)])
 
         data=["" for i in range(6)]
         if out:
@@ -2289,18 +2381,18 @@ class Page4_SellerEditProfile(tk.Frame):
         btn.grid(row=10, column=3,pady=10)
 
     def modifyProfile(self,master,name,age,gender,mobno,orgname,addorg):
-        cond1=Apptools.in_limit(self,10**9,10**10,mobno)
+        cond1=Apptools.in_limit(self,10**9,10**10-1,mobno)
         cond2=Apptools.in_limit(self, 0, 150, age)
         cond3=Apptools.check_digit(self, age,mobno)
         cond4=mobno.find(".")==-1 and mobno.find("-")==-1
         cond5=Apptools.is_not_null(self, name, age, gender,mobno,orgname,addorg)
         if cond1 and cond2 and cond3 and cond4 and cond5:
-            query="select username from logindataseller where mobno = '" + mobno + "';"
-            query_2 = "Update logindataseller Set Name='"+name+"',age="+age+",MobNo="+mobno+",Gender='"+gender+"',orgname='"+orgname+"',addorg='"+addorg+"' where username='"+G_USERNAME.get()+"';"
-            out=Apptools.sql_run(self, query)
+            query="select username from logindataseller where mobno = %s;"
+            query_2 = "Update logindataseller Set Name=%s,age=%s,MobNo=%s,Gender=%s,orgname=%s,addorg=%s where username=%s;"
+            out=Apptools.sql_run(self, [query,(mobno,)])
             l=len(out[0])
             if out and (l==0 or (l==1 and out[0][0][0]==G_USERNAME.get())):
-                rec=Apptools.sql_run(self, query_2)
+                rec=Apptools.sql_run(self, [query_2,(name,age,mobno,gender,orgname,addorg,G_USERNAME.get())])
                 if rec is not None:
                     G_NAME.set("Welcome " + name)
                     messagebox.showinfo("Success!", "Profile updated successfully")
@@ -2308,7 +2400,13 @@ class Page4_SellerEditProfile(tk.Frame):
             elif out is not None:
                 messagebox.showwarning("Sorry! Mobile number is already taken", "Try a different mobile number")
         else:
-            messagebox.showwarning("Error", "Fill all form(s) correctly to continue")
+            if not(cond1):
+                messagebox.showinfo("Invalid entry", "Enter Valid 10-digit Mobile Number")
+            elif not(cond2):
+                messagebox.showinfo("Invalid entry", "Enter Valid Age (0~150 year)")
+            else:
+                messagebox.showinfo("Invalid entry", "Fill all the entry correctly to proceed")
+
 
 class Page4_SellerCheckBalance(tk.Frame):
     def __init__(self, master):
@@ -2341,8 +2439,8 @@ class Page4_SellerCheckBalance(tk.Frame):
 
     def checkBal(self,pin):
         if pin==G_PIN.get():
-            query="select walno from logindataseller where username='"+G_USERNAME.get()+"';"
-            out=Apptools.sql_run(self, query)
+            query="select walno from logindataseller where username=%s;"
+            out=Apptools.sql_run(self, [query,(G_USERNAME.get(),)])
             if out is not None:
                 if out[0]!=[]:
                     walno=out[0][0][0]
@@ -2401,8 +2499,8 @@ class Page4_SellerCashoutRequest(tk.Frame):
 
     def Sellercashout(self,master,pin,amt):
         if pin==G_PIN.get():
-            query="select walno from logindataseller where username='"+G_USERNAME.get()+"';"
-            out=Apptools.sql_run(self, query)
+            query="select walno from logindataseller where username=%s;"
+            out=Apptools.sql_run(self, [query,(G_USERNAME.get(),)])
             if out is not None:
                 if out[0]!=[]:
                     walno=out[0][0][0]
@@ -2422,7 +2520,7 @@ class Page4_SellerCashoutRequest(tk.Frame):
                             messagebox.showwarning("Insufficient fund","There is insufficient money in your wallet or amount withdrwn less than Rs. 5.")
                             master.switch_frame(Page3_DashboardSeller)
                     else:
-                        messagebox.showwarning("Invalid entry","Enter a valid amount(Max 1 Crore).")
+                        messagebox.showwarning("Invalid entry","Invalid amount.\nEnter a valid amount(Max 1 Crore).")
                 else:
                     messagebox.showerror("No such user exists!","Try relogin to our app(possible server glitch or your id is deleted by devs)")
         else:
@@ -2486,8 +2584,8 @@ class Page4_SellerDeleteAccount(tk.Frame):
 
     def checkDel(self,master,pin):
         if pin==G_PIN.get():
-            query="select walno from logindataseller where username='"+G_USERNAME.get()+"';"
-            out=Apptools.sql_run(self, query)
+            query="select walno from logindataseller where username=%s;"
+            out=Apptools.sql_run(self, [query,(G_USERNAME.get(),)])
             if out is not None:
                 if out[0]!=[]:
                     walno=out[0][0][0]
@@ -2496,11 +2594,11 @@ class Page4_SellerDeleteAccount(tk.Frame):
                     if bal==0:
                         choice = messagebox.askyesno("Alert", "Are you sure want to delete your account?")
                         if choice:
-                            del_query1="Delete from logindataseller where username = '" + G_USERNAME.get() + "';"
-                            del_query2="Delete from walletbank where walno = '" + walno + "';"
+                            del_query1="Delete from logindataseller where username = %s;"
+                            del_query2="Delete from walletbank where walno = %s;"
                             rec=Apptools.defaultqueryrun(self,"items")
-                            del_query3="Delete from items where SellerUsername = '" + G_USERNAME.get() + "';"
-                            rec2=Apptools.sql_run(self,del_query1,del_query2,del_query3)
+                            del_query3="Delete from items where SellerUsername = %s;"
+                            rec2=Apptools.sql_run(self,[del_query1,(G_USERNAME.get(),)],[del_query2,(walno,)],[del_query3,(G_USERNAME.get(),)])
                             if rec and rec2:
                                 messagebox.showinfo("Success", "Account Deleted Successfully")
                                 Apptools.logout(self,master)
@@ -2589,8 +2687,8 @@ class Page4_SellerAddItems(tk.Frame):
         lbl.config(font=("Chiller", 20), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=8, column=1,padx=5,pady=10)
 
-        globals()['savlocimgbtn']="Additem.png"
-        Apptools.imgsavebtn(self,"Additem.png",100,100,8,2)
+        globals()['savlocimgbtn']=DEFAULTIMAGEDir
+        Apptools.imgsavebtn(self,DEFAULTIMAGEDir,100,100,8,2)
 
         btn=tk.Button(self,text="Add Item")
         btn.config(command=lambda: self.additem(master,Iname.get(),Iwhp.get(),Irp.get(),Istock.get(),IDesc.get("1.0","end-1c"),CategoryVar.get(),savlocimgbtn))
@@ -2600,8 +2698,8 @@ class Page4_SellerAddItems(tk.Frame):
     def additem(self,master,iname,iwp,irp,istock,idesc,icat,filedir):
         cond1=Apptools.is_not_null(self, iname, iwp, irp, istock, idesc,icat,filedir)
         cond2=Apptools.check_digit(self, iwp,irp,istock)
-        filedir=filedir.replace("\\","\\\\")
-        if cond1 and cond2:
+        cond3=float(irp)>=float(iwp)
+        if cond1 and cond2 and cond3:
             rec=Apptools.defaultqueryrun(self,"items")
 
             if rec:
@@ -2612,7 +2710,10 @@ class Page4_SellerAddItems(tk.Frame):
                     messagebox.showinfo("Success!","Item added successfully")
                     master.switch_frame(Page3_SellerItemManagement)
         else:
-            messagebox.showwarning("Invalid Input","Fill all the forms correctly to continue")
+            if not(cond3):
+                messagebox.showwarning("Invalid Input","Wholesale must be less than or equal to retail price")
+            else:
+                messagebox.showwarning("Invalid Input","Fill all the forms correctly to continue")
 
 
 class Page4_SellerModifyItems(tk.Frame):
@@ -2652,8 +2753,8 @@ class Page4_SellerModifyItems(tk.Frame):
         cond1=Apptools.check_digit(self,itemno)
         if cond1:
             rec=Apptools.defaultqueryrun(self,"items")
-            query="select iname,iwhp,irp,idesc,imgdir,icat from items where itemno="+itemno+" and SellerUsername='"+G_USERNAME.get()+"';"
-            out = Apptools.sql_run(self,query)
+            query="select iname,iwhp,irp,idesc,imgdir,icat from items where itemno=%s and SellerUsername=%s;"
+            out = Apptools.sql_run(self,[query,(itemno,G_USERNAME.get())])
 
             data=["" for i in range(4)]
             if out and rec:
@@ -2716,22 +2817,27 @@ class Page4_SellerModifyItems(tk.Frame):
     def modifyDetails(self,master,itemno,iname,iwhp,irp,idesc,icat,filedir):
         cond1=Apptools.is_not_null(self, iname, iwhp, irp, idesc,icat,filedir)
         cond2=Apptools.check_digit(self, iwhp,irp)
+        cond4=float(irp)>=float(iwhp)
         Category = ["Stationary","Electronics","Clothing","Beauty",
                                 "Softwares","Sports","Daily Use","Grocery","Health","Others"]
         cond3=icat.title() in Category
-        filedir=filedir.replace("\\","\\\\")
-        if cond1 and cond2 and cond3:
+        if cond1 and cond2 and cond3 and cond4:
             rec=Apptools.defaultqueryrun(self,"items")
             if rec:
-                query_2 = "Update items Set iname='"+iname+"',iwhp="+iwhp+",irp="+irp+",idesc='"+idesc+"',imgdir='"+filedir+"',icat='"+icat+"' where itemno="+str(itemno)+";"
-                rec2=Apptools.sql_run(self, query_2)
+                query_2 = "Update items Set iname=%s,iwhp=%s,irp=%s,idesc=%s,imgdir=%s,icat=%s where itemno=%s;"
+                rec2=Apptools.sql_run(self, [query_2,(iname,iwhp,irp,idesc,filedir,icat,itemno)])
 
                 if rec2 is not None:
                     messagebox.showinfo("Success!", "Item's details updated successfully")
                     master.switch_frame(Page3_SellerItemManagement)
 
         else:
-            messagebox.showwarning("Invalid Input","Fill all the forms correctly to continue")
+            if not(cond4):
+                messagebox.showwarning("Invalid Input","Wholesale must be less than or equal to retail price")
+            else:
+                messagebox.showwarning("Invalid Input","Fill all the forms correctly to continue")
+
+
 
 class Page4_SellerAddStocks(tk.Frame):
     def __init__(self, master):
@@ -2771,8 +2877,8 @@ class Page4_SellerAddStocks(tk.Frame):
         cond1=Apptools.check_digit(self,itemno)
         if cond1:
             rec=Apptools.defaultqueryrun(self,"items")
-            query="select istock from items where itemno="+itemno+" and SellerUsername='"+G_USERNAME.get()+"';"
-            out = Apptools.sql_run(self,query)
+            query="select istock from items where itemno=%s and SellerUsername=%s;"
+            out = Apptools.sql_run(self,[query,(itemno,G_USERNAME.get())])
             if out and rec:
                 data = out[0]
                 if data!=[]:
@@ -2803,12 +2909,15 @@ class Page4_SellerAddStocks(tk.Frame):
             rec=Apptools.defaultqueryrun(self,"items")
 
             if rec:
-                query_2 = "Update items Set istock="+istock+" where itemno="+str(itemno)+";"
-                rec2=Apptools.sql_run(self, query_2)
+                if float(istock)>=0 and round(float(istock))==float(istock):
+                    query_2 = "Update items Set istock=%s where itemno=%s;"
+                    rec2=Apptools.sql_run(self, [query_2,(istock,itemno)])
 
-                if rec2 is not None:
-                    messagebox.showinfo("Success!", "Stocks Added successfully")
-                    master.switch_frame(Page3_SellerItemManagement)
+                    if rec2 is not None:
+                        messagebox.showinfo("Success!", "Stocks Updated successfully")
+                        master.switch_frame(Page3_SellerItemManagement)
+                else:
+                    messagebox.showwarning("Invalid Input","Enter a valid no. of Stock (>=0)")
         else:
             messagebox.showwarning("Invalid Input","Fill all the forms correctly to continue")
 
@@ -2868,12 +2977,13 @@ class Page4_SellerSearchItem(tk.Frame):
 
         if Apptools.is_not_null(self, text):
             if criteria not in ("Wholesale Price","Retail Price"):
-                query ="Select * from items where "+ self.dbeqv(criteria)+ " like '%"+ text+ "%' and SellerUsername='"+G_USERNAME.get()+"';"
-                record = Apptools.sql_run(self, query)
+                text="%"+text+"%"
+                query ="Select * from items where "+ self.dbeqv(criteria)+ " like %s and SellerUsername=%s;"
+                record = Apptools.sql_run(self, [query,(text,G_USERNAME.get())])
             else:
                 if Apptools.check_digit(self, text):
-                    query ="Select * from items where " + self.dbeqv(criteria) + " = " + str(text)+";"
-                    record = Apptools.sql_run(self, query)
+                    query ="Select * from items where " + self.dbeqv(criteria) + " = %s and SellerUsername=%s;"
+                    record = Apptools.sql_run(self, [query,((text,G_USERNAME.get()))])
                 else:
                     messagebox.showwarning("Error", "Incorrect input!")
                     record = None
@@ -2903,8 +3013,8 @@ class Page4_SellerSearchItem(tk.Frame):
 
     def showAll(self):
         Apptools.defaultqueryrun(self,"items")
-        sql_query = "Select * from items where SellerUsername='"+G_USERNAME.get()+"';"
-        record = Apptools.sql_run(self, sql_query)
+        sql_query = "Select * from items where SellerUsername=%s;"
+        record = Apptools.sql_run(self, [sql_query,(G_USERNAME.get(),)])
         if record is not None:
             out = record[0]
             if out != []:
@@ -2915,8 +3025,8 @@ class Page4_SellerSearchItem(tk.Frame):
     def outofstock(self):
         Apptools.defaultqueryrun(self,"items")
 
-        sql_query = "Select * from items where SellerUsername='"+G_USERNAME.get()+"' and istock=0;"
-        record = Apptools.sql_run(self, sql_query)
+        sql_query = "Select * from items where SellerUsername=%s and istock=0;"
+        record = Apptools.sql_run(self, [sql_query,(G_USERNAME.get(),)])
         if record is not None:
             out = record[0]
             if out != []:
@@ -2953,6 +3063,7 @@ class Page4_SellerSearchItem(tk.Frame):
         listBox.grid(row=1, column=0)
 
         for i in out:
+            i=self.singleline(i)
             listBox.insert("", "end", values=i[:len(column)])
 
             for indx, val in enumerate(i[:len(column)]):
@@ -2977,6 +3088,18 @@ class Page4_SellerSearchItem(tk.Frame):
             tree.move(item[1], '', indx)
 
         tree.heading(col,command=lambda col=col: self.sortby(tree, col, int(not descending)))
+
+    def singleline(self,txtlines):
+        l=[]
+        for i in txtlines:
+            if isinstance(i,str):
+                l.append(i.replace("\n"," "))
+            else:
+                l.append(i)
+        return l
+
+
+
 
 
 class Page4_SellerRemoveItem(tk.Frame):
@@ -3016,8 +3139,8 @@ class Page4_SellerRemoveItem(tk.Frame):
         cond1=Apptools.check_digit(self,itemno)
         if cond1:
             rec=Apptools.defaultqueryrun(self,"items")
-            query="select iname,irp,idesc from items where itemno="+itemno+" and SellerUsername='"+G_USERNAME.get()+"';"
-            out = Apptools.sql_run(self,query)
+            query="select iname,irp,idesc from items where itemno=%s and SellerUsername=%s;"
+            out = Apptools.sql_run(self,[query,(itemno,G_USERNAME.get())])
             if rec and out:
                 data = out[0]
                 if data!=[]:
@@ -3025,8 +3148,8 @@ class Page4_SellerRemoveItem(tk.Frame):
                     txt="Name = "+data[0]+"\nPrice = "+str(data[1])+"\nDescription = "+data[2]
                     choice = messagebox.askyesno("Alert", "Are you sure want to remove the item?\n"+txt)
                     if choice:
-                        del_query="Delete from items where itemno = " + itemno + ";"
-                        rec = Apptools.sql_run(self, del_query)
+                        del_query="Delete from items where itemno = %s;"
+                        rec = Apptools.sql_run(self, [del_query,(itemno,)])
                         if rec is not None:
                             messagebox.showinfo("Success","Item Removed Successfully")
                             Apptools.clearImgCache(self)
@@ -3059,8 +3182,8 @@ class Page4_SellerRecentTransactions(tk.Frame):
 
     def recentlybrought(self):
         rec=Apptools.defaultqueryrun(self,"trecord")
-        query="Select * from trecord where SellerUsername='"+G_USERNAME.get()+"';"
-        out=Apptools.sql_run(self,query)
+        query="Select * from trecord where SellerUsername=%s;"
+        out=Apptools.sql_run(self,[query,(G_USERNAME.get(),)])
 
         if out is not None and rec:
             out=out[0]
@@ -3070,7 +3193,7 @@ class Page4_SellerRecentTransactions(tk.Frame):
                 messagebox.showinfo( "No records found","No recent transactions")
 
     def output(self, out):
-        column = ("Transaction Unique Id","Transaction Id","Date and Time","Item name","Quantity","Paid Amount","Buyer Username","Seller Organisation")
+        column = ("Transaction Unique Id","Transaction Id","Date and Time","Item name","Quantity","Amount Paid","Buyer Name","Seller Organisation")
 
         listBox = ttk.Treeview(self,selectmode="extended",columns=column,show="headings")
 
@@ -3089,11 +3212,7 @@ class Page4_SellerRecentTransactions(tk.Frame):
 
 
         for i in out:
-            i=list(i)
-            i[3]=self.itemname(i[3])
-            i[6]=self.buyername(i[6])
-            i[7]=self.sellerorg(i[7])
-            i=tuple(i)
+            i=i[:-3]
             listBox.insert("", "end", values=i)
 
             for indx, val in enumerate(i):
@@ -3101,32 +3220,7 @@ class Page4_SellerRecentTransactions(tk.Frame):
                 if listBox.column(column[indx], width=None) < ilen:
                     listBox.column(column[indx], width=ilen)
 
-    def itemname(self,ino):
-        Apptools.defaultqueryrun(self,"items")
-        query="Select iname from items where itemno="+str(ino)+";"
-        out=Apptools.sql_run(self,query)
-        if out and out[0]:
-            return out[0][0][0]
-        else:
-            messagebox.showerror("Data corruption","Transaction log data is corrupted\nContact Admin")
 
-    def sellerorg(self,user):
-        Apptools.defaultqueryrun(self,"logindataseller")
-        query="Select OrgName from logindataseller where username='"+user+"';"
-        out=Apptools.sql_run(self,query)
-        if out and out[0]:
-            return out[0][0][0]
-        else:
-            messagebox.showerror("Data corruption","Transaction log data is corrupted\nContact Admin")
-
-    def buyername(self,user):
-        Apptools.defaultqueryrun(self,"logindatabuyer")
-        query="Select Name from logindatabuyer where username='"+user+"';"
-        out=Apptools.sql_run(self,query)
-        if out and out[0]:
-            return out[0][0][0]
-        else:
-            messagebox.showerror("Data corruption","Transaction log data is corrupted\nContact Admin")
 
     def sortby(self,tree, col, descending):
         data = [(tree.set(child, col), child) for child in tree.get_children('')]
@@ -3145,6 +3239,7 @@ class Page4_SellerRecentTransactions(tk.Frame):
             tree.move(item[1], '', indx)
 
         tree.heading(col,command=lambda col=col: self.sortby(tree, col, int(not descending)))
+
 
 
 class Page4_BuyerShowProfile(tk.Frame):
@@ -3166,8 +3261,8 @@ class Page4_BuyerShowProfile(tk.Frame):
         lbl.grid(row=1, column=1,columnspan=2,padx=30,pady=10)
 
         Fieldname=["Name","Age","Gender","Mobile No.","Premium Member","Delivery Address"]
-        query="select Name,age,Gender,MobNo,ispremium,deladd from logindatabuyer where username='"+G_USERNAME.get()+"';"
-        out=Apptools.sql_run(self, query)
+        query="select Name,age,Gender,MobNo,ispremium,deladd from logindatabuyer where username=%s;"
+        out=Apptools.sql_run(self, [query,(G_USERNAME.get(),)])
         if out:
             out=list(out[0][0])
             if out[2] == "M":
@@ -3208,8 +3303,8 @@ class Page4_BuyerEditProfile(tk.Frame):
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,columnspan=3,padx=20,pady=10)
 
-        query="select Name,age,MobNo,deladd,gender from logindatabuyer where username='"+G_USERNAME.get()+"';"
-        out = Apptools.sql_run(self, query)
+        query="select Name,age,MobNo,deladd,gender from logindatabuyer where username=%s;"
+        out = Apptools.sql_run(self, [query,(G_USERNAME.get(),)])
 
         data=["" for i in range(5)]
         if out:
@@ -3255,18 +3350,18 @@ class Page4_BuyerEditProfile(tk.Frame):
         btn.grid(row=9, column=3,pady=10)
 
     def modifyProfile(self,master,name,age,gender,mobno,deladd):
-        cond1=Apptools.in_limit(self,10**9,10**10,mobno)
+        cond1=Apptools.in_limit(self,10**9,10**10-1,mobno)
         cond2=Apptools.in_limit(self, 0, 150, age)
         cond3=Apptools.check_digit(self, age,mobno)
         cond4=mobno.find(".")==-1 and mobno.find("-")==-1
         cond5=Apptools.is_not_null(self, name, age, gender,mobno,deladd)
         if cond1 and cond2 and cond3 and cond4 and cond5:
-            query="select username from logindatabuyer where mobno = '" + mobno + "';"
-            query_2 = "Update logindatabuyer Set Name='"+name+"',age="+age+",MobNo="+mobno+",Gender='"+gender+"',deladd='"+deladd+"' where username='"+G_USERNAME.get()+"';"
-            out=Apptools.sql_run(self, query)
+            query="select username from logindatabuyer where mobno = %s;"
+            query_2 = "Update logindatabuyer Set Name=%s,age=%s,MobNo=%s,Gender=%s,deladd=%s where username=%s;"
+            out=Apptools.sql_run(self, [query,(mobno,)])
             l=len(out[0])
             if out and (l==0 or (l==1 and out[0][0][0]==G_USERNAME.get())):
-                rec=Apptools.sql_run(self, query_2)
+                rec=Apptools.sql_run(self, [query_2,(name,age,mobno,gender,deladd,G_USERNAME.get())])
                 if rec is not None:
                     G_NAME.set("Welcome " + name)
                     messagebox.showinfo("Success!", "Profile updated successfully")
@@ -3274,7 +3369,12 @@ class Page4_BuyerEditProfile(tk.Frame):
             elif out is not None:
                 messagebox.showwarning("Sorry! Mobile number is already taken", "Try a different mobile number")
         else:
-            messagebox.showwarning("Error", "Fill all form(s) correctly to continue")
+            if not(cond1):
+                messagebox.showinfo("Invalid entry", "Enter Valid 10-digit Mobile Number")
+            elif not(cond2):
+                messagebox.showinfo("Invalid entry", "Enter Valid Age (0~150 year)")
+            else:
+                messagebox.showinfo("Invalid entry", "Fill all the entry correctly to proceed")
 
 class Page4_BuyerRecentlyBrought(tk.Frame):
     def __init__(self, master):
@@ -3298,8 +3398,8 @@ class Page4_BuyerRecentlyBrought(tk.Frame):
 
     def recentlybrought(self):
         rec=Apptools.defaultqueryrun(self,"trecord")
-        query="Select * from trecord where BuyerUsername='"+G_USERNAME.get()+"';"
-        out=Apptools.sql_run(self,query)
+        query="Select * from trecord where BuyerUsername=%s;"
+        out=Apptools.sql_run(self,[query,(G_USERNAME.get(),)])
 
         if out is not None and rec:
             out=out[0]
@@ -3313,7 +3413,7 @@ class Page4_BuyerRecentlyBrought(tk.Frame):
                 lbl.grid(row=2, column=1,padx=30,pady=10)
 
     def output(self, out):
-        column = ("Transaction Unique Id","Transaction Id","Date and Time","Item name","Quantity","Paid Amount","Buyer Username","Seller Organisation")
+        column = ("Transaction Unique Id","Transaction Id","Date and Time","Item name","Quantity","Amount Paid","Buyer Name","Seller Organisation")
 
         listBox = ttk.Treeview(self,selectmode="extended",columns=column,show="headings")
 
@@ -3332,35 +3432,13 @@ class Page4_BuyerRecentlyBrought(tk.Frame):
 
 
         for i in out:
-            i=list(i)
-            i[3]=self.itemname(i[3])
-            i[7]=self.sellerorg(i[7])
-            i=tuple(i)
+            i=i[:-3]
             listBox.insert("", "end", values=i)
 
             for indx, val in enumerate(i):
                 ilen = tkFont.Font().measure(val)
                 if listBox.column(column[indx], width=None) < ilen:
                     listBox.column(column[indx], width=ilen)
-
-    def itemname(self,ino):
-        Apptools.defaultqueryrun(self,"items")
-        query="Select iname from items where itemno="+str(ino)+";"
-        out=Apptools.sql_run(self,query)
-        if out and out[0]:
-            return out[0][0][0]
-        else:
-            messagebox.showerror("Data corruption","Transaction log data is corrupted\nContact Admin")
-
-    def sellerorg(self,user):
-        Apptools.defaultqueryrun(self,"logindataseller")
-        query="Select OrgName from logindataseller where username='"+user+"';"
-        out=Apptools.sql_run(self,query)
-        if out and out[0]:
-            return out[0][0][0]
-        else:
-            messagebox.showerror("Data corruption","Transaction log data is corrupted\nContact Admin")
-
 
     def sortby(self,tree, col, descending):
         data = [(tree.set(child, col), child) for child in tree.get_children('')]
@@ -3411,8 +3489,8 @@ class Page4_BuyerDeleteAccount(tk.Frame):
 
     def checkDel(self,master,pin):
         if pin==G_PIN.get():
-            query="select walno from logindatabuyer where username='"+G_USERNAME.get()+"';"
-            out=Apptools.sql_run(self, query)
+            query="select walno from logindatabuyer where username=%s;"
+            out=Apptools.sql_run(self, [query,(G_USERNAME.get(),)])
             if out is not None:
                 if out[0]!=[]:
                     walno=out[0][0][0]
@@ -3421,9 +3499,9 @@ class Page4_BuyerDeleteAccount(tk.Frame):
                     if bal==0:
                         choice = messagebox.askyesno("Alert", "Are you sure want to delete your account?")
                         if choice:
-                            del_query1="Delete from logindatabuyer where username = '" + G_USERNAME.get() + "';"
-                            del_query2="Delete from walletbank where walno = '" + walno + "';"
-                            rec=Apptools.sql_run(self,del_query1,del_query2)
+                            del_query1="Delete from logindatabuyer where username = %s;"
+                            del_query2="Delete from walletbank where walno = %s;"
+                            rec=Apptools.sql_run(self,[del_query1,(G_USERNAME.get(),)],[del_query2,(walno,)])
                             if rec:
                                 messagebox.showinfo("Success", "Account Deleted Successfully")
                                 Apptools.logout(self,master)
@@ -3473,8 +3551,8 @@ class Page4_BuyerCheckBalance(tk.Frame):
 
     def checkBal(self,pin):
         if pin==G_PIN.get():
-            query="select walno from logindatabuyer where username='"+G_USERNAME.get()+"';"
-            out=Apptools.sql_run(self, query)
+            query="select walno from logindatabuyer where username=%s;"
+            out=Apptools.sql_run(self, [query,(G_USERNAME.get(),)])
             if out is not None:
                 if out[0]!=[]:
                     walno=out[0][0][0]
@@ -3533,8 +3611,8 @@ class Page4_BuyerCashout(tk.Frame):
 
     def buyercashout(self,master,pin,amt):
         if pin==G_PIN.get():
-            query="select walno from logindatabuyer where username='"+G_USERNAME.get()+"';"
-            out=Apptools.sql_run(self, query)
+            query="select walno from logindatabuyer where username=%s;"
+            out=Apptools.sql_run(self, [query,(G_USERNAME.get(),)])
             if out is not None:
                 if out[0]!=[]:
                     walno=out[0][0][0]
@@ -3554,7 +3632,7 @@ class Page4_BuyerCashout(tk.Frame):
                             messagebox.showwarning("Insufficient fund","There is insufficient money in your wallet or amount withdrawn less than Rs. 5.")
                             master.switch_frame(Page3_DashboardBuyer)
                     else:
-                        messagebox.showwarning("Invalid entry","Enter a valid amount(Max 1 Crore).")
+                        messagebox.showwarning("Invalid entry","Invalid Entry\nEnter a valid amount(Max 1 Crore).")
                 else:
                     messagebox.showerror("No such user exists!","Try relogin to our app(possible server glitch or your id is deleted by devs)")
         else:
@@ -3607,13 +3685,12 @@ class Page4_BuyerShopping(tk.Frame):
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
         lbl.grid(row=1, column=1,pady=10,columnspan=3)
 
-        Apptools.image_Show(frame.scrollable_frame, "Lighthouse.jpg", 2, 0, 700, 110,cspan=5)
+        Apptools.image_Show(frame.scrollable_frame, DASHBOARDImgDir, 2, 0, 700, 110,cspan=5)
 
-        Dir=["Img1.jpg","Img2.png","Img3.jpg","Img4.jpg","Img5.png","Img6.png"]
-        Dir+=["Img7.jpg","Img8.png","Img9.jpg"]
+        Dir=CATEGORYCARDImgDir
         r,c=3,1
         for i in range(len(Dir)):
-            diry="CardsShop//"+Dir[i]
+            diry=CATEGORYCARDFOLDERNAME+"//"+Dir[i]
             try:
                 Photo = Image.open(diry)
                 Photo = Photo.resize((200, 200))
@@ -3673,8 +3750,9 @@ class Page5_BuyerItemPicker(tk.Frame):
         Apptools.defaultqueryrun(self,"items")
 
         if Apptools.is_not_null(self, category):
-            query ="Select * from items where icat like '%"+ category+ "%';"
-            record = Apptools.sql_run(self, query)
+            category="%"+category+"%"
+            query ="Select * from items where icat like %s and istock>0;"
+            record = Apptools.sql_run(self, [query,(category,)])
 
             if record is not None:
                 out = record[0]
@@ -3694,7 +3772,7 @@ class Page5_BuyerItemPicker(tk.Frame):
 
                 orgname=self.sellerorgname(selluser)
 
-                txt="Item name : "+iname.title()+"\n"+"Seller : "+orgname
+                txt="Item name : "+iname.title()+"\nSeller : "+orgname
                 txt+="\nDescription : "+idesc.title()+"\nCategory : "+icat.title()
                 txt+="\nPrice : ₹"+str(irp)
 
@@ -3706,15 +3784,15 @@ class Page5_BuyerItemPicker(tk.Frame):
                 except Exception as e:
                     print(e)
 
-                    Photo = Image.open("Additem.png")
+                    Photo = Image.open(DEFAULTIMAGEDir)
                     Photo = Photo.resize((250, 150))
                     render = ImageTk.PhotoImage(Photo)
 
                 imgbtnfs = tk.Button(frame.scrollable_frame,text=txt ,image=render,compound =tk.LEFT)
                 imgbtnfs.image = render
-                imgbtnfs.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0)
+                imgbtnfs.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,justify=tk.LEFT)
                 imgbtnfs.config(activebackground="#3297E9",font=("Segoe Print", 15))
-                imgbtnfs.grid(row =r,column=0,padx=10,pady=10,sticky="ew")
+                imgbtnfs.grid(row =r,column=0,padx=10,pady=10,sticky="w")
 
                 idata=[ino,iname,iwp,irp,idesc,icat,istock,imgdir,selluser,orgname]
                 imgbtnfs.config(command = lambda x=idata: self.framechange(master,x))
@@ -3730,8 +3808,8 @@ class Page5_BuyerItemPicker(tk.Frame):
     def sellerorgname(self,suser):
         rec=Apptools.defaultqueryrun(self,"logindataseller")
         if rec:
-            query="select OrgName from logindataseller where username='"+suser+"';"
-            out=Apptools.sql_run(self,query)
+            query="select OrgName from logindataseller where username=%s;"
+            out=Apptools.sql_run(self,[query,(suser,)])
             if out:
                 if out[0]:
                     return out[0][0][0]
@@ -3791,8 +3869,9 @@ class Page4_BuyerSearchItems(tk.Frame):
         Apptools.defaultqueryrun(self,"items")
 
         if Apptools.is_not_null(self, text):
-            query ="Select * from items where "+ self.dbeqv(criteria)+ " like '%"+ text+ "%';"
-            record = Apptools.sql_run(self, query)
+            text="%"+text+"%"
+            query ="Select * from items where "+ self.dbeqv(criteria)+ " like %s;"
+            record = Apptools.sql_run(self, [query,(text,)])
 
             if record is not None:
                 out = record[0]
@@ -3822,7 +3901,7 @@ class Page4_BuyerSearchItems(tk.Frame):
 
                 orgname=self.sellerorgname(selluser)
 
-                txt="Item name : "+iname.title()+"\n"+"Seller : "+orgname
+                txt="Item name : "+iname.title()+"\nSeller : "+orgname
                 txt+="\nDescription : "+idesc.title()+"\nCategory : "+icat.title()
                 txt+="\nPrice : ₹"+str(irp)
 
@@ -3834,15 +3913,15 @@ class Page4_BuyerSearchItems(tk.Frame):
                 except Exception as e:
                     print(e)
 
-                    Photo = Image.open("Additem.png")
+                    Photo = Image.open(DEFAULTIMAGEDir)
                     Photo = Photo.resize((250, 150))
                     render = ImageTk.PhotoImage(Photo)
 
                 imgbtnfs = tk.Button(frame.scrollable_frame,text=txt ,image=render,compound =tk.LEFT)
                 imgbtnfs.image = render
-                imgbtnfs.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0)
-                imgbtnfs.config(activebackground="#3297E9",font=("Segoe Print", 15))
-                imgbtnfs.grid(row =r,column=0,padx=10,pady=10,sticky="ew")
+                imgbtnfs.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,justify=tk.LEFT)
+                imgbtnfs.config(activebackground="#3297E9",font=("Segoe Print",15))
+                imgbtnfs.grid(row =r,column=0,padx=10,pady=10,sticky="w")
 
                 idata=[ino,iname,iwp,irp,idesc,icat,istock,imgdir,selluser,orgname]
                 imgbtnfs.config(command = lambda x=idata: self.framechange(master,x))
@@ -3858,8 +3937,8 @@ class Page4_BuyerSearchItems(tk.Frame):
     def sellerorgname(self,suser):
         rec=Apptools.defaultqueryrun(self,"logindataseller")
         if rec:
-            query="select OrgName from logindataseller where username='"+suser+"';"
-            out=Apptools.sql_run(self,query)
+            query="select OrgName from logindataseller where username=%s;"
+            out=Apptools.sql_run(self,[query,(suser,)])
             if out:
                 if out[0]:
                     return out[0][0][0]
@@ -3890,7 +3969,7 @@ class Page6_BuyerProductView(tk.Frame):
 
         ino,iname,iwp,irp,idesc,icat,istock,imgdir,selluser,orgname=itemdetails
 
-        txt="Item name : "+iname.title()+"\n"+"Seller : "+orgname
+        txt="Item name : "+iname.title()+"\nSeller : "+orgname
         txt+="\nDescription : "+idesc.title()+"\nCategory : "+icat.title()
         txt+="\nPrice : ₹"+str(irp)
 
@@ -3902,7 +3981,7 @@ class Page6_BuyerProductView(tk.Frame):
         except Exception as e:
             print(e)
 
-            Photo = Image.open("Additem.png")
+            Photo = Image.open(DEFAULTIMAGEDir)
             Photo = Photo.resize((200, 200))
             render = ImageTk.PhotoImage(Photo)
 
@@ -3928,7 +4007,7 @@ class Page6_BuyerProductView(tk.Frame):
         qty.grid(row=4, column=2)
         qty.insert(0, 1)
 
-        btn=tk.Button(self,text="Proceed to Pay",command=lambda: self.paypage(master,ino,qty.get(),istock))
+        btn=tk.Button(self,text="Add to Cart &\nProceed to Pay",command=lambda: self.paypage(master,ino,qty.get(),istock))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=5, column=2,padx=10,pady=10)
 
@@ -3941,22 +4020,26 @@ class Page6_BuyerProductView(tk.Frame):
         if cond1 and cond2 and cond3:
             cartuc=Apptools.generateuniquecode(self,"cart","cartuc")
             Apptools.defaultqueryrun(self,"cart")
-            query11="Select cartuc,iquantity from cart where itemno="+str(ino)+" and BuyerUsername = '"+G_USERNAME.get()+"';"
-            query12="Select istock from items where itemno="+str(ino)+";"
-            out=Apptools.sql_run(self,query11,query12)
+            query11="Select cartuc,iquantity from cart where itemno=%s and BuyerUsername = %s;"
+            query12="Select istock from items where itemno=%s;"
+            out=Apptools.sql_run(self,[query11,(ino,G_USERNAME.get())],[query12,(ino,)])
 
             if out is not None and out[0]!=[] and out[1]!=[]:
                 istockn=out[1][0][0]
                 if out[0][0][1]+int(iqty)<=istockn:
-                    query2="Update cart set iquantity=iquantity+"+str(iqty)+" where cartuc='"+out[0][0][0]+"';"
-                    rec0=Apptools.sql_run(self,query2)
+                    query2="Update cart set iquantity=iquantity+%s where cartuc=%s;"
+                    rec0=Apptools.sql_run(self,[query2,(iqty,out[0][0][0])])
                     if rec0 is not None:
                         if showMsg:
                             messagebox.showinfo("Success!","Added to Cart Successfully!")
                         return True
+
                 else:
-                    istockn-=out[0][0][1]
-                    messagebox.showwarning("Invalid Input!","Enter Valid Input for Quantity 0<>"+str(istock))
+                    maxst=istockn-out[0][0][1]
+                    if maxst==0 and istock>0:
+                        messagebox.showwarning("Out of Stock","Item is out of stock check your cart if you have pre-booked that.")
+                    else:
+                        messagebox.showwarning("Invalid Input!","Enter Valid Input for Quantity\nMin Value=0\nMax Value="+str(maxst))
             elif out[0]==[]:
                 rec = Apptools.insertSQL(self,"cart",cartuc,ino,iqty,G_USERNAME.get())
                 if rec is not None:
@@ -3964,15 +4047,15 @@ class Page6_BuyerProductView(tk.Frame):
                         messagebox.showinfo("Success!","Added to Cart Successfully!")
                     return True
         elif istock==0:
-            messagebox.showwarning("Out of Stock","Item is out of stock check your cart if you have pre-booked that.")
+            messagebox.showwarning("Out of Stock","Item is out of stock.")
         else:
-            messagebox.showwarning("Invalid Input!","Enter Valid Input for Quantity 0<>"+str(istock))
+            messagebox.showwarning("Invalid Input!","Enter Valid Input for Quantity\nMin Value=0\nMax Value="+str(istock))
 
     def addtowishlist(self,ino):
 
         wishlistuc=Apptools.generateuniquecode(self,"wishlist","wishlistuc")
-        query="Select wishlistuc from wishlist where itemno="+str(ino)+" and BuyerUsername='"+G_USERNAME.get()+"';"
-        out=Apptools.sql_run(self,query)
+        query="Select wishlistuc from wishlist where itemno=%s and BuyerUsername=%s;"
+        out=Apptools.sql_run(self,[query,(ino,G_USERNAME.get())])
         if out==[[]]:
             rec = Apptools.insertSQL(self,"wishlist",wishlistuc,ino,G_USERNAME.get())
             if rec is not None:
@@ -3997,7 +4080,7 @@ class Page7_BuyerPaymentProceed(tk.Frame):
 
         btn=tk.Button(self,text="Logout",command=lambda: Apptools.logout(self, master))
         btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
-        btn.grid(row=0, column=4, sticky="e")
+        btn.grid(row=0, column=3, sticky="e")
 
         lbl = tk.Label(self, text="Payment Confirmation")
         lbl.config(font=("Chiller", 40), fg="#E8E8E8", bg="#333333")
@@ -4022,7 +4105,7 @@ class Page7_BuyerPaymentProceed(tk.Frame):
 
                 orgname=self.sellerorgname(selluser)
 
-                txt="Item name : "+iname.title()+"\n"+"Seller : "+orgname
+                txt="Item name : "+iname.title()+"\nSeller : "+orgname
                 txt+="\nDescription : "+idesc.title()+"\nCategory : "+icat.title()
                 txt+="\nPrice : ₹"+str(irp)+"\nQuantity : "+str(iqty)
 
@@ -4034,15 +4117,15 @@ class Page7_BuyerPaymentProceed(tk.Frame):
                 except Exception as e:
                     print(e)
 
-                    Photo = Image.open("Additem.png")
+                    Photo = Image.open(DEFAULTIMAGEDir)
                     Photo = Photo.resize((200, 200))
                     render = ImageTk.PhotoImage(Photo)
 
                 lbl = tk.Label(frame.scrollable_frame,text=txt ,image=render,compound =tk.LEFT)
                 lbl.image = render
-                lbl.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0)
+                lbl.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,justify=tk.LEFT)
                 lbl.config(activebackground="#3297E9",font=("Segoe Print", 15))
-                lbl.grid(row =r,column=0,padx=10,pady=10,sticky="ew")
+                lbl.grid(row =r,column=0,padx=10,pady=10,sticky="w")
 
                 btn=tk.Button(frame.scrollable_frame,text="Remove Item",command=lambda x=ino: self.deleteitemcart(master,x))
                 btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
@@ -4062,23 +4145,23 @@ class Page7_BuyerPaymentProceed(tk.Frame):
         if userd is not None:
             lbl = tk.Label(self, text="Deliever to\n"+userd[0]+"\n"+userd[1])
             lbl.config(font=("Segoe Print", 20), fg="#E8E8E8", bg="#333333")
-            lbl.grid(row=3, column=2,padx=10,pady=10,rowspan=2,sticky="ns")
+            lbl.grid(row=3, column=2,padx=10,pady=5,rowspan=2,sticky="ns")
 
             netb=self.bargain(out,userd[2])
             lbl1 = tk.Label(self, text="Net Bargain : ₹"+str(netb))
             lbl1.config(font=("Segoe Print", 20), fg="#E8E8E8", bg="#333333")
-            lbl1.grid(row=7, column=0,columnspan=2,padx=10,pady=10,sticky="ns")
+            lbl1.grid(row=7, column=0,columnspan=2,padx=10,pady=5,sticky="nsw")
 
-            lbl = tk.Label(self, text="Amount to be Paid : ₹"+str(totalprice-netb)+"+₹5 (PG Charges)")
+            lbl = tk.Label(self, text="Amount to be Paid : ₹"+str(round(totalprice-netb+5,2))+"\nInclusive of PG Charge(₹5)")
             lbl.config(font=("Segoe Print", 20), fg="#E8E8E8", bg="#333333")
-            lbl.grid(row=8, column=0,columnspan=3,padx=10,pady=10,sticky="ns")
+            lbl.grid(row=8, column=0,columnspan=2,padx=10,pady=5,sticky="nsw")
 
 
         lbl = tk.Label(self, text="Total Price : ₹"+str(totalprice))
         lbl.config(font=("Segoe Print", 20), fg="#E8E8E8", bg="#333333")
-        lbl.grid(row=6, column=0,columnspan=2,padx=10,pady=10,sticky="ns")
+        lbl.grid(row=6, column=0,columnspan=2,padx=10,pady=10,sticky="nsw")
 
-        price=totalprice-netb
+        price=round(totalprice-netb,2)
         btn=tk.Button(self,text="Proceed to Pay",command=lambda: self.payportal(master,out,price))
         btn.config(bg="#1F8EE7",padx=7,pady=4,fg="#E8E8E8",bd=0,activebackground="#3297E9")
         btn.grid(row=6, column=2,rowspan=3)
@@ -4088,16 +4171,16 @@ class Page7_BuyerPaymentProceed(tk.Frame):
     def retrievedata(self):
         Apptools.defaultqueryrun(self,"cart")
         Apptools.defaultqueryrun(self,"items")
-        query="Select itemno,iquantity from cart where buyerusername ='"+G_USERNAME.get()+"';"
-        out=Apptools.sql_run(self,query)
+        query="Select itemno,iquantity from cart where buyerusername =%s;"
+        out=Apptools.sql_run(self,[query,(G_USERNAME.get(),)])
 
         data=[]
         if out is not None:
             if out[0]!=[]:
                 out=out[0]
                 for ino,iqty in out:
-                    query2="Select * from items where itemno="+str(ino)+";"
-                    out2=Apptools.sql_run(self,query2)
+                    query2="Select * from items where itemno=%s;"
+                    out2=Apptools.sql_run(self,[query2,(ino,)])
 
                     if out2 is not None and out2[0]!=[]:
                         out2=out2[0][0]
@@ -4107,23 +4190,23 @@ class Page7_BuyerPaymentProceed(tk.Frame):
     def sellerorgname(self,suser):
         rec=Apptools.defaultqueryrun(self,"logindataseller")
         if rec:
-            query="select OrgName from logindataseller where username='"+suser+"';"
-            out=Apptools.sql_run(self,query)
+            query="select OrgName from logindataseller where username=%s;"
+            out=Apptools.sql_run(self,[query,(suser,)])
             if out:
                 if out[0]:
                     return out[0][0][0]
 
     def userdata(self):
-        query="select Name,DelAdd,IsPremium from logindatabuyer where username='"+G_USERNAME.get()+"';"
+        query="select Name,DelAdd,IsPremium from logindatabuyer where username=%s;"
 
-        out=Apptools.sql_run(self,query)
+        out=Apptools.sql_run(self,[query,(G_USERNAME.get(),)])
         if out:
             if out[0]:
                 return out[0][0]
 
     def deleteitemcart(self,master,ino):
-        query="delete from cart where itemno="+str(ino)+" and BuyerUsername='"+G_USERNAME.get()+"';"
-        rec=Apptools.sql_run(self,query)
+        query="delete from cart where itemno=%s and BuyerUsername=%s;"
+        rec=Apptools.sql_run(self,[query,(ino,G_USERNAME.get())])
         if rec is not None:
             messagebox.showinfo("Success","Item Deleted Successfully")
             master.switch_frame(Page7_BuyerPaymentProceed)
@@ -4134,12 +4217,11 @@ class Page7_BuyerPaymentProceed(tk.Frame):
         if out!=[] and ispremium.upper()=='Y':
             for ino,iname,iwp,irp,idesc,icat,istock,imgdir,selluser,iqty in out:
                 r=(irp/iwp)*100
-                if r<=120:
-                    netbargain+= 0
-                else:
+                if r>120:
                     netbargain+= max(0,iqty*(irp-(iwp*120/100)))
                     # Ensuring at least 20% Profit(approx) for seller and admin combined
-        return round(netbargain,2)
+                    # 14% for seller
+        return round(netbargain,2) # To ensure bargain is never greater than the limit due to approximation
 
     def payportal(self,master,out,price):
 
@@ -4188,58 +4270,65 @@ class Page7_BuyerPaymentProceed(tk.Frame):
         if pin==G_PIN.get():
 
             walno=self.walnofind("logindatabuyer",G_USERNAME.get())
-            amt=Apptools.checkBalance(self,walno,pin)
+            amt=round(float(Apptools.checkBalance(self,walno,pin)),2)
             c=[]
             if amt>=price+5:
-                txt="Transaction Amount : "+str(price+5)+"\nIncluding PG Charges\nBalance after deduction : "+str(amt-(price+5))+"\nAre you sure want to proceed?"
+                txt="Transaction Amount : "+str(price+5)+"\nIncluding PG Charges\nBalance after deduction : "+str(round(amt-(price+5),2))+"\nAre you sure want to proceed?"
                 choice = messagebox.askyesno("Transaction Confirmation",txt)
                 if choice:
-                    query="Update walletbank set Amt =Amt-"+str(price+5)+" where walno='"+walno+"' and pin="+str(pin)+";"
-                    rec=Apptools.sql_run(self,query)
-                    if rec is not None:
-                        tid=Apptools.generateuniquecode(self,"trecord","tid")
-                        for i in range(len(out)):
-                            ino=out[i][0]
-                            iwp=out[i][2]
-                            irp=out[i][3]
-                            iqty=out[i][9]
-                            selleruser=out[i][8]
-                            selwalno=self.walnofind("logindataseller",selleruser)
+                    SUPERADMIN=self.findsuperadmin()
+                    if SUPERADMIN is not None:
+                        query="Update walletbank set Amt =Amt-%s where walno=%s and pin=%s;"
+                        rec=Apptools.sql_run(self,[query,(price+5,walno,pin)])
+                        if rec is not None:
+                            tid=Apptools.generateuniquecode(self,"trecord","tid")
+                            for i in range(len(out)):
+                                ino=out[i][0]
+                                irp=out[i][3]
+                                iqty=out[i][9]
+                                selleruser=out[i][8]
+                                iname=out[i][1]
+                                selwalno=self.walnofind("logindataseller",selleruser)
 
-                            r=(irp/iwp)*100
-                            if r<=120:
-                                netbargain= 0
+                                ispremium=self.userdata()[2]
+                                netbargain=self.bargain([out[i]],ispremium)
+
+                                bname=self.buyername(G_USERNAME.get())
+                                sorg=self.sellerorg(selleruser)
+
+
+                                query2="Update walletbank set Amt =Amt+%s where walno=%s;"
+                                query3="delete from cart where itemno=%s and BuyerUsername=%s;"
+                                query4="Update items set istock=istock-%s where itemno=%s;"
+
+                                rec2=Apptools.sql_run(self,[query2,(((irp*iqty-netbargain)*0.95),selwalno)],[query3,(ino,G_USERNAME.get())],[query4,(iqty,ino)])
+                                tuid=Apptools.generateuniquecode(self,"trecord","tuid")
+                                tdate=self.timeformat()
+                                rec4=Apptools.insertSQL(self,"trecord",tuid,tid,tdate,iname,iqty,(irp*iqty-netbargain),bname,sorg,ino,G_USERNAME.get(),selleruser)
+
+                                if rec2 is not None and rec4 is not None:
+                                    c+=rec2+rec4
+                                else:
+                                    messagebox.showerror("Transaction Failed!","Ask Admin for refund")
+                                    c=None
+                                    break
+
+                            admwalno=self.walnofind("logindataadmin",SUPERADMIN)
+                            query5="Update walletbank set Amt =Amt+%s where walno=%s;"
+                            rec3=Apptools.sql_run(self,[query5,((5+(price*0.05)),admwalno)])
+                            if rec3 is not None:
+                                c+=rec3
                             else:
-                                netbargain= max(0,iqty*(irp-(iwp*120/100)))
-
-                            query2="Update walletbank set Amt =Amt+"+str((irp-netbargain)*0.95)+" where walno='"+selwalno+"';"
-                            query3="delete from cart where itemno="+str(ino)+" and BuyerUsername='"+G_USERNAME.get()+"';"
-                            query4="Update items set istock=istock-"+str(iqty)+" where itemno="+str(ino)+";"
-
-                            rec2=Apptools.sql_run(self,query2,query3,query4)
-
-                            tuid=Apptools.generateuniquecode(self,"trecord","tuid")
-                            tdate=self.timeformat()
-                            rec4=Apptools.insertSQL(self,"trecord",tuid,tid,tdate,ino,iqty,(irp-netbargain),G_USERNAME.get(),selleruser)
-
-                            if rec2 is not None and rec4 is not None:
-                                c+=rec2+rec4
-                            else:
-                                messagebox.showerror("Transaction Failed!","Ask Admin for refund")
+                                messagebox.showerror("Transaction Failed!","Contact Admin for details")
                                 c=None
-                                break
-                        admwalno=self.walnofind("logindataadmin",SUPERADMIN)
-                        query5="Update walletbank set Amt =Amt+"+str(5+((price)*0.05))+" where walno='"+admwalno+"';"
-                        rec3=Apptools.sql_run(self,query5)
-                        if rec3 is not None:
-                            c+=rec3
-                        else:
-                            messagebox.showerror("Transaction Failed!","Contact Admin for details")
-                            c=None
 
-                        if c is not None:
-                            messagebox.showinfo("Success!","Transaction completed successfully!")
-                            master.switch_frame(Page3_BuyerShoppe)
+                            if c is not None:
+                                messagebox.showinfo("Success!","Transaction completed successfully!")
+                                lbl = tk.Label(self, text="Transaction Done\nItem Delivered")
+                                lbl.config(font=("Segoe Print", 20), fg="#E8E8E8", bg="#333333")
+                                lbl.grid(row=6, column=2,rowspan=3,sticky="ns")
+                    else:
+                        messagebox.showinfo("Transaction Failed","As there is no Admin on our system so your transaction cannot be processed.")
 
             else:
                 messagebox.showwarning("Insufficient fund","There is insufficient fund in your wallet.\nTry Recharging Your Wallet")
@@ -4248,8 +4337,8 @@ class Page7_BuyerPaymentProceed(tk.Frame):
             messagebox.showwarning("Invalid PIN","Invalid PIN\nTry entering correct PIN")
 
     def walnofind(self,table,username):
-        query="select walno from "+table+" where username='"+username+"';"
-        out=Apptools.sql_run(self, query)
+        query="select walno from "+table+" where username=%s;"
+        out=Apptools.sql_run(self, [query,(username,)])
         if out is not None:
             if out[0]!=[]:
                 walno=out[0][0][0]
@@ -4259,6 +4348,33 @@ class Page7_BuyerPaymentProceed(tk.Frame):
         now = datetime.now()
         formatted_date = now.strftime('%Y-%m-%d %H:%M:%S')
         return formatted_date
+
+    def sellerorg(self,user):
+        Apptools.defaultqueryrun(self,"logindataseller")
+        query="Select OrgName from logindataseller where username=%s;"
+        out=Apptools.sql_run(self,[query,(user,)])
+        if out and out[0]:
+            return out[0][0][0]
+        else:
+            return "SellerUsername.:-"+user
+
+    def buyername(self,user):
+        Apptools.defaultqueryrun(self,"logindatabuyer")
+        query="Select Name from logindatabuyer where username=%s;"
+        out=Apptools.sql_run(self,[query,(user,)])
+        if out and out[0]:
+            return out[0][0][0]
+        else:
+            return "Buyer Username:-"+user
+
+    def findsuperadmin(self):
+        Apptools.defaultqueryrun(self,"logindataadmin")
+        query="Select id,Username from logindataadmin;"
+        out=Apptools.sql_run(self,query)
+        if out and out[0]:
+            return out[0][0][1]
+
+
 
 
 
@@ -4291,7 +4407,7 @@ class Page4_BuyerWishlist(tk.Frame):
 
                 orgname=self.sellerorgname(selluser)
 
-                txt="Item name : "+iname.title()+"\n"+"Seller : "+orgname
+                txt="Item name : "+iname.title()+"\nSeller : "+orgname
                 txt+="\nDescription : "+idesc.title()+"\nCategory : "+icat.title()
                 txt+="\nPrice : ₹"+str(irp)
 
@@ -4303,15 +4419,15 @@ class Page4_BuyerWishlist(tk.Frame):
                 except Exception as e:
                     print(e)
 
-                    Photo = Image.open("Additem.png")
+                    Photo = Image.open(DEFAULTIMAGEDir)
                     Photo = Photo.resize((200, 200))
                     render = ImageTk.PhotoImage(Photo)
 
                 lbl = tk.Label(frame.scrollable_frame,text=txt ,image=render,compound =tk.LEFT)
                 lbl.image = render
-                lbl.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0)
+                lbl.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,justify=tk.LEFT)
                 lbl.config(activebackground="#3297E9",font=("Segoe Print", 15))
-                lbl.grid(row =r,column=0,padx=10,pady=10,sticky="ew")
+                lbl.grid(row =r,column=0,padx=10,pady=10,sticky="w")
 
                 btn=tk.Button(frame.scrollable_frame,text="Remove Item",command=lambda x=ino: self.deletewishlist(master,x))
                 btn.config(bg="#1F8EE7",padx=3,fg="#E8E8E8",bd=0,activebackground="#3297E9")
@@ -4332,16 +4448,16 @@ class Page4_BuyerWishlist(tk.Frame):
     def retrievedata(self):
         Apptools.defaultqueryrun(self,"wishlist")
         Apptools.defaultqueryrun(self,"items")
-        query="Select itemno from wishlist where buyerusername ='"+G_USERNAME.get()+"';"
-        out=Apptools.sql_run(self,query)
+        query="Select itemno from wishlist where buyerusername =%s;"
+        out=Apptools.sql_run(self,[query,(G_USERNAME.get(),)])
 
         data=[]
         if out is not None:
             if out[0]!=[]:
                 out=out[0]
                 for ino in out:
-                    query2="Select * from items where itemno="+str(ino[0])+";"
-                    out2=Apptools.sql_run(self,query2)
+                    query2="Select * from items where itemno=%s;"
+                    out2=Apptools.sql_run(self,[query2,(ino[0],)])
 
                     if out2 is not None and out2[0]!=[]:
                         out2=out2[0][0]
@@ -4351,15 +4467,15 @@ class Page4_BuyerWishlist(tk.Frame):
     def sellerorgname(self,suser):
         rec=Apptools.defaultqueryrun(self,"logindataseller")
         if rec:
-            query="select OrgName from logindataseller where username='"+suser+"';"
-            out=Apptools.sql_run(self,query)
+            query="select OrgName from logindataseller where username=%s;"
+            out=Apptools.sql_run(self,[query,(suser,)])
             if out:
                 if out[0]:
                     return out[0][0][0]
 
     def deletewishlist(self,master,ino):
-        query="delete from wishlist where itemno="+str(ino)+" and BuyerUsername='"+G_USERNAME.get()+"';"
-        rec=Apptools.sql_run(self,query)
+        query="delete from wishlist where itemno=%s and BuyerUsername=%s;"
+        rec=Apptools.sql_run(self,[query,(ino,G_USERNAME.get())])
         if rec is not None:
             messagebox.showinfo("Success","Item Deleted Successfully")
             master.switch_frame(Page4_BuyerWishlist)
@@ -4377,31 +4493,34 @@ class Page4_BuyerWishlist(tk.Frame):
             if cond1 and cond2 and cond3:
                 cartuc=Apptools.generateuniquecode(self,"cart","cartuc")
                 Apptools.defaultqueryrun(self,"cart")
-                query11="Select cartuc,iquantity from cart where itemno="+str(ino)+" and BuyerUsername = '"+G_USERNAME.get()+"';"
-                query12="Select istock from items where itemno="+str(ino)+";"
-                out=Apptools.sql_run(self,query11,query12)
+                query11="Select cartuc,iquantity from cart where itemno=%s and BuyerUsername = %s;"
+                query12="Select istock from items where itemno=%s;"
+                out=Apptools.sql_run(self,[query11,(ino,G_USERNAME.get())],[query12,(ino,)])
 
                 if out is not None and out[0]!=[] and out[1]!=[]:
                     istockn=out[1][0][0]
                     if out[0][0][1]+int(iqty)<=istockn:
-                        query2="Update cart set iquantity=iquantity+"+str(iqty)+" where cartuc='"+out[0][0][0]+"';"
-                        rec0=Apptools.sql_run(self,query2)
+                        query2="Update cart set iquantity=iquantity+%s where cartuc=%s;"
+                        rec0=Apptools.sql_run(self,[query2,(iqty,out[0][0][0])])
                         if rec0 is not None:
 
                             messagebox.showinfo("Success!","Added to Cart Successfully!")
                             return True
                     else:
-                        istockn-=out[0][0][1]
-                        messagebox.showwarning("Invalid Input!","Enter Valid Input for Quantity 0<>"+str(istock))
+                        maxst=istockn-out[0][0][1]
+                        if maxst==0 and istockn>0:
+                            messagebox.showwarning("Out of Stock","Item is out of stock check your cart if you have pre-booked that.")
+                        else:
+                            messagebox.showwarning("Invalid Input!","Enter Valid Input for Quantity\nMin Value=0\nMax Value="+str(maxst))
                 elif out[0]==[]:
                     rec = Apptools.insertSQL(self,"cart",cartuc,ino,iqty,G_USERNAME.get())
                     if rec is not None:
                         messagebox.showinfo("Success!","Added to Cart Successfully!")
                         return True
             elif istock==0:
-                messagebox.showwarning("Out of Stock","Item is out of stock check your cart if you have pre-booked that.")
+                messagebox.showwarning("Out of Stock","Item is out of stock.")
             else:
-                messagebox.showwarning("Invalid Input!","Enter Valid Input for Quantity 0<>"+str(istock))
+                messagebox.showwarning("Invalid Input!","Enter Valid Input for Quantity\nMin Value=0\nMax Value="+str(istock))
 
 
 # Main Program
